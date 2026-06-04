@@ -25,7 +25,6 @@ static const uint8_t MARK_SLOT1 = 0x08U;
 static const uint8_t MARK_SLOT2 = 0x04U;
 static const uint8_t MARK_NONE  = 0x00U;
 static const uint8_t NUMBER_OF_SLOTS = 2U;
-static const int64_t BURST_DELAY = 30LL;           // default delay, msec
 static const unsigned int MAX_MMDVM_CHANNELS = 7U;
 static const unsigned int MAX_PFB_CHANNELS = 12U;  // max sample rate 300k
 static const unsigned int FILTER_DELAY = 48U;      // must reduce on RPI platforms if bursts are consistently late due to CPU load

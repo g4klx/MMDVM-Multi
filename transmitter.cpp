@@ -156,6 +156,7 @@ void Transmitter::run()
     bool channel_idle[MAX_MMDVM_CHANNELS];
     for(int i=0;i<MAX_MMDVM_CHANNELS;i++)
       channel_idle[i] = false;
+
     m_burstTimer->lock();
     for(unsigned i=0;i<m_activeChannels;i++)
     {
@@ -193,6 +194,7 @@ void Transmitter::run()
       }
     }
     m_burstTimer->unlock();
+
     std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
     processSamples(output_samples, channel_idle);
     void *buffs[1] = {(void*)output_samples};
@@ -234,7 +236,6 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
   
   std::complex<float> channelized[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
   std::complex<float> channels[MAX_PFB_CHANNELS] = {1.0e-9f, 1.0e-9f};;
-  
 
   for(unsigned i=0; i<TX_INTERP_OUT_SIZE; i++)
   {

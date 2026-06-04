@@ -111,16 +111,15 @@ int main(int argc, char** argv)
     
     Device* device = new Device(deviceType, modemURI, double(sample_rate), rx_freq, tx_freq,
                                 rx_gain, tx_gain, rx_antenna, tx_antenna, debug);
+    if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
+    {
+        return 1;
+    }
     Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
     Resampler* resampler = new Resampler(25, 24, 0.5, active_channels);
     FMMod* fm_mod = new FMMod(0.5, active_channels);
     DMRTiming* timing = new DMRTiming(delay);
-    
-    if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
-    {
-        return 1;
-    }
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,

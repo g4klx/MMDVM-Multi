@@ -40,7 +40,6 @@ class DMRTiming
 public:
     DMRTiming(unsigned int burst_delay);
     ~DMRTiming();
-    long long getTimeDelta(unsigned int cn=0);
     void setTimer(long long value, unsigned int cn=0);
     uint8_t checkTime(unsigned int cn=0, bool time_base_received=false);
     long long allocateSlot(uint8_t slot_no, int64_t &timing, unsigned int cn=0);
@@ -49,6 +48,7 @@ public:
     void unlock();
 
 private:
+    long long getTimeDelta(unsigned int cn=0);
     long long m_burstDelay;
     bool m_timingInitialized[MAX_MMDVM_CHANNELS];
     std::mutex m_timingMutex;
