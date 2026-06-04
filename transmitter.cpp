@@ -1,0 +1,253 @@
+/*
+ *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include <assert.h>
+#include "transmitter.h"
+
+
+Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
+                         Channelizer* channelizer, DMRTiming* burst_timer,
+                         unsigned int num_active_channels, unsigned int num_pfb_channels) : 
+m_running(true),
+m_stopped(false),
+m_device(device),
+m_fmMod(fm_mod),
+m_resampler(resampler),
+m_rotator(rotator),
+m_channelizer(channelizer),
+m_burstTimer(burst_timer),
+m_activeChannels(num_active_channels),
+m_pfbChannels(num_pfb_channels),
+m_timingCorrection(0LL)
+{
+  assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
+  assert(m_pfbChannels > 1U);
+  assert(m_pfbChannels <= MAX_PFB_CHANNELS);
+  for(unsigned i = 0;i < m_activeChannels;i++)
+  {
+    m_zmqCtx[i] = zmq::context_t(1);
+    m_zmqSocket[i] = zmq::socket_t(m_zmqCtx[i], ZMQ_REQ);
+    m_zmqSocket[i].set(zmq::sockopt::sndhwm, 10);
+    m_zmqSocket[i].set(zmq::sockopt::linger, 0);
+    int socket_no = i + 1;
+    m_zmqSocket[i].connect ("ipc:///tmp/mmdvm-tx" + std::to_string(socket_no) + ".ipc");
+    m_sn[i] = 1;
+  }
+  unsigned int max_chan_real = m_pfbChannels / 2U - 1U;
+  max_chan_real = std::min<unsigned int>(max_chan_real, 4U);
+  m_fillReal = std::min<unsigned int>(max_chan_real, m_activeChannels);
+  
+}
+
+Transmitter::~Transmitter()
+{
+  for(unsigned i = 0;i < m_activeChannels;i++)
+  {
+    m_zmqSocket[i].close();
+    m_zmqCtx[i].close();
+  }
+}
+
+void Transmitter::start()
+{
+  m_thread = std::thread(&Transmitter::run, this);
+  m_thread.detach();
+}
+
+
+void Transmitter::stop()
+{
+  m_running = false;
+}
+
+bool Transmitter::stopped() const
+{
+  return m_stopped;
+}
+
+void Transmitter::nextSlot(unsigned int channel)
+{
+  if(m_sn[channel] == 2)
+    m_sn[channel] = 1;
+  else
+    m_sn[channel] = 2;
+}
+
+void Transmitter::getZMQMessage()
+{
+  for(unsigned j=0; j < m_activeChannels; j++)
+  {
+    zmq::message_t mq_message;
+    int size = 0;
+    zmq::recv_result_t recv_result;
+    zmq::message_t request_msg (1);
+    memcpy (request_msg.data(), "s", sizeof(char));
+    m_zmqSocket[j].send (request_msg, zmq::send_flags::none);
+    recv_result = m_zmqSocket[j].recv(mq_message);
+    size = mq_message.size();
+    if(size < 1)
+    {
+      continue;
+    }
+    unsigned int buf_size = 0;
+    memcpy(&buf_size, (uint8_t*)mq_message.data(), sizeof(uint32_t));
+    if(buf_size == SAMPLES_PER_SLOT)
+    {
+      uint8_t control[SAMPLES_PER_SLOT];
+      int16_t data[SAMPLES_PER_SLOT];
+      memcpy(&control, (uint8_t*)mq_message.data() + sizeof(uint32_t), buf_size * sizeof(uint8_t));
+      
+      memcpy(&data, (uint8_t*)mq_message.data() + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
+             buf_size * sizeof(int16_t));
+      for(unsigned i=0; i<buf_size; i++)
+      {
+        control_buf[j].push_back(control[i]);
+        data_buf[j].push_back(float(data[i])/32767.0f);
+      }
+    }
+  }
+}
+
+void Transmitter::run()
+{
+  while(m_running)
+  {
+    long long timeNs = 0LL;
+    bool initialized = true;
+    m_burstTimer->lock();
+    for(unsigned i=0;i<m_activeChannels;i++)
+    {
+      if(!m_burstTimer->getInit(i))
+      {
+        initialized = false;
+        break;
+      }
+    }
+    m_burstTimer->unlock();
+    if(!initialized)
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(2));
+      continue;
+    }
+
+    getZMQMessage();
+
+    if(m_timingCorrection > 0)
+    {
+      std::this_thread::sleep_for(std::chrono::nanoseconds(m_timingCorrection));
+      m_timingCorrection = 0;
+    }
+
+    bool channel_idle[MAX_MMDVM_CHANNELS];
+    for(int i=0;i<MAX_MMDVM_CHANNELS;i++)
+      channel_idle[i] = false;
+    m_burstTimer->lock();
+    for(unsigned i=0;i<m_activeChannels;i++)
+    {
+      long long time = 0LL;
+      if(data_buf[i].size() < 1)
+      {
+        channel_idle[i] = true;
+        data_buf[i].insert(data_buf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
+        control_buf[i].insert(control_buf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
+        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
+        if(i == 0)
+          timeNs = time;
+        nextSlot(i);
+      }
+      else
+      {
+        for(unsigned j=0;j<control_buf[i].size();j++)
+        {
+          uint8_t control = control_buf[i].at(j);
+          if(control == MARK_SLOT1)
+          {
+            m_sn[i] = 1;
+            time = m_burstTimer->allocateSlot(1U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
+            if(i == 0)
+              timeNs = time;
+          }
+          if(control == MARK_SLOT2)
+          {
+            m_sn[i] = 2;
+            time = m_burstTimer->allocateSlot(2U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
+            if(i == 0)
+              timeNs = time;
+          }
+        }
+      }
+    }
+    m_burstTimer->unlock();
+    std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
+    processSamples(output_samples, channel_idle);
+    void *buffs[1] = {(void*)output_samples};
+    int flags = 0;
+    if(timeNs > 0LL)
+      flags = SOAPY_SDR_HAS_TIME;
+    int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_SAMP_OUT_SIZE, flags, timeNs);
+    if (ret <= 0)
+    {
+      ::fprintf(stderr,"Error writing samples to device: %s\n", SoapySDR_errToStr(ret));
+    }
+  }
+  m_stopped = true;
+}
+
+void Transmitter::processSamples(std::complex<float>* output_samples, bool* channel_idle)
+{
+  std::complex<float> channelizer_samples[MAX_MMDVM_CHANNELS][TX_INTERP_OUT_SIZE] = {{0.0f, 0.0f}};
+  for(unsigned i=0;i<m_activeChannels;i++)
+  {
+    if(data_buf[i].size() >= SAMPLES_PER_SLOT)
+    {
+      std::complex<float> freq_modulated[SAMPLES_PER_SLOT] = {0.0f, 0.0f};
+      m_fmMod->modulate(i, data_buf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
+      if(channel_idle[i])
+      {
+        for(unsigned j=0;j<SAMPLES_PER_SLOT;j++)
+        {
+          freq_modulated[j] = {1.0e-9f, 1.0e-9f};
+        }
+      }
+      std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0f, 0.0f};
+      m_resampler->upsample(i, freq_modulated, SAMPLES_PER_SLOT, resampled);
+      ::memcpy(&channelizer_samples[i][0], resampled, TX_INTERP_OUT_SIZE * sizeof(std::complex<float>));
+      data_buf[i].erase(data_buf[i].begin(), data_buf[i].begin() + SAMPLES_PER_SLOT);
+      control_buf[i].erase(control_buf[i].begin(), control_buf[i].begin() + SAMPLES_PER_SLOT);
+    }
+  }
+  
+  std::complex<float> channelized[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
+  std::complex<float> channels[MAX_PFB_CHANNELS] = {1.0e-9f, 1.0e-9f};;
+  
+
+  for(unsigned i=0; i<TX_INTERP_OUT_SIZE; i++)
+  {
+    for (unsigned k=0; k<m_fillReal; k++)
+    {
+      channels[k] = channelizer_samples[k][i] * TX_DAC_SCALING / float(m_activeChannels);
+    }
+    for (unsigned m=m_pfbChannels-1U, p=m_fillReal; p<m_activeChannels; m--,p++)
+    {
+      channels[m] = channelizer_samples[p][i] * TX_DAC_SCALING / float(m_activeChannels);
+    }
+    m_channelizer->synthesize(channels, &channelized[i*m_pfbChannels]);
+  }
+  m_rotator->rotate(channelized, TX_SAMP_OUT_SIZE, output_samples);
+}
+
