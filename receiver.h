@@ -20,6 +20,7 @@
 #define RECEIVER_H
 
 #include <thread>
+#include <string>
 #include <cstdint>
 #include <SoapySDR/Device.hpp>
 #include <zmq.hpp>

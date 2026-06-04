@@ -20,6 +20,7 @@
 #define TRANSMITTER_H
 
 #include <complex>
+#include <string>
 #include <thread>
 #include <vector>
 #include <cstdint>
