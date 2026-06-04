@@ -130,9 +130,9 @@ void Transmitter::run()
   {
     long long timeNs = 0LL;
 
-    m_burstTimer->lock();
     if(!m_timingInit)
     {
+      m_burstTimer->lock();
       bool has_time = true;
       for(unsigned i=0;i<m_activeChannels;i++)
       {
@@ -142,10 +142,11 @@ void Transmitter::run()
           break;
         }
       }
+      m_burstTimer->unlock();
       if(has_time)
         m_timingInit = true;
     }
-    m_burstTimer->unlock();
+
     if(!m_timingInit)
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(2));
