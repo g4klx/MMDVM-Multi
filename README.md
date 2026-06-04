@@ -36,4 +36,13 @@ $ cmake ..
 $ make -j4
 </pre>
 
+
+Running
+-----
+
+<pre>
+$ ./MMDVM-Multi ../MMDVM-Multi.ini
+</pre>
+
+
 This software is licenced under the GPL v2 and is primarily intended for amateur and educational use.
