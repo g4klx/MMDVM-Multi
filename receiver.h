@@ -42,7 +42,6 @@ public:
     void start();
     void run();
     void stop();
-    void join();
     bool stopped() const;
     
 private:

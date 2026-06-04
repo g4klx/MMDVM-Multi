@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     bool debug = conf.getModemTrace();
     unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
     active_channels = std::max<unsigned int>(active_channels, 1U);
-    unsigned int delay = conf.getDelay();
+    int sample_delay = conf.getDelay(); // can be negative
     std::string deviceType = conf.getModemType();
     std::string modemURI = conf.getModemURI();
     unsigned int sample_rate = std::max<unsigned int>(conf.getSampleRate(), 125000U);
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
     Resampler* resampler = new Resampler(25, 24, 0.5, active_channels);
     FMMod* fm_mod = new FMMod(0.5, active_channels);
-    DMRTiming* timing = new DMRTiming(delay);
+    DMRTiming* timing = new DMRTiming(sample_delay);
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,

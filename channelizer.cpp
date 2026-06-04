@@ -23,8 +23,8 @@ Channelizer::Channelizer(unsigned int num_pfb_channels) :
 m_channels(num_pfb_channels)
 {
   assert(m_channels > 1);
-  m_synthesizer = firpfbch_crcf_create_kaiser(LIQUID_SYNTHESIZER, m_channels, FILTER_DELAY, 70.0f);
-  m_analyzer = firpfbch_crcf_create_kaiser(LIQUID_ANALYZER, m_channels, FILTER_DELAY, 70.0f);
+  m_synthesizer = firpfbch_crcf_create_kaiser(LIQUID_SYNTHESIZER, m_channels, PFB_FILTER_DELAY, 70.0f);
+  m_analyzer = firpfbch_crcf_create_kaiser(LIQUID_ANALYZER, m_channels, PFB_FILTER_DELAY, 70.0f);
 }
 
 Channelizer::~Channelizer()

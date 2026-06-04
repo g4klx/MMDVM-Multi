@@ -122,7 +122,7 @@ bool CConf::read()
 			else if (::strcmp(key, "Channels") == 0)
 				m_numChannels = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "Delay") == 0)
-				m_delay = (unsigned int)::atoi(value);
+				m_delay = ::atoi(value);
 		} else if (section == SECTION::LOG) {
 			if (::strcmp(key, "DisplayLevel") == 0)
 				m_logDisplayLevel = (unsigned int)::atoi(value);
@@ -176,7 +176,7 @@ unsigned int CConf::getNumChannels() const
 	return m_numChannels;
 }
 
-unsigned int CConf::getDelay() const
+int CConf::getDelay() const
 {
 	return m_delay;
 }

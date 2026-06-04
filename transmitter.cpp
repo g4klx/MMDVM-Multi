@@ -25,6 +25,7 @@ Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Ro
                          unsigned int num_active_channels, unsigned int num_pfb_channels) : 
 m_running(true),
 m_stopped(false),
+m_timingInit(false),
 m_device(device),
 m_fmMod(fm_mod),
 m_resampler(resampler),
@@ -128,18 +129,24 @@ void Transmitter::run()
   while(m_running)
   {
     long long timeNs = 0LL;
-    bool initialized = true;
+
     m_burstTimer->lock();
-    for(unsigned i=0;i<m_activeChannels;i++)
+    if(!m_timingInit)
     {
-      if(!m_burstTimer->getInit(i))
+      bool has_time = true;
+      for(unsigned i=0;i<m_activeChannels;i++)
       {
-        initialized = false;
-        break;
+        if(!m_burstTimer->getInit(i))
+        {
+          has_time = false;
+          break;
+        }
       }
+      if(has_time)
+        m_timingInit = true;
     }
     m_burstTimer->unlock();
-    if(!initialized)
+    if(!m_timingInit)
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(2));
       continue;
@@ -167,7 +174,7 @@ void Transmitter::run()
         data_buf[i].insert(data_buf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
         control_buf[i].insert(control_buf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
-        if(i == 0)
+        if(timeNs == 0LL)
           timeNs = time;
         nextSlot(i);
       }
@@ -180,14 +187,14 @@ void Transmitter::run()
           {
             m_sn[i] = 1;
             time = m_burstTimer->allocateSlot(1U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
-            if(i == 0)
+            if(timeNs == 0LL)
               timeNs = time;
           }
           if(control == MARK_SLOT2)
           {
             m_sn[i] = 2;
             time = m_burstTimer->allocateSlot(2U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
-            if(i == 0)
+            if(timeNs == 0LL)
               timeNs = time;
           }
         }

@@ -29,8 +29,8 @@ m_activeChannels(num_channels)
   assert(m_interp > 0);
   for(unsigned i=0;i<m_activeChannels;i++)
   {
-    m_upsampler[i] = rresamp_crcf_create_kaiser(interp, decim, FILTER_DELAY, bw, 70.0f);
-    m_downsampler[i] = rresamp_crcf_create_kaiser(decim, interp, FILTER_DELAY, bw, 70.0f);
+    m_upsampler[i] = rresamp_crcf_create_kaiser(interp, decim, RESAMPLER_FILTER_DELAY, bw, 70.0f);
+    m_downsampler[i] = rresamp_crcf_create_kaiser(decim, interp, RESAMPLER_FILTER_DELAY, bw, 70.0f);
   }
 }
 

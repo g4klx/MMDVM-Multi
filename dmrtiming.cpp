@@ -18,9 +18,9 @@
 
 #include "dmrtiming.h"
 
-DMRTiming::DMRTiming(unsigned int burst_delay)
+DMRTiming::DMRTiming(int sample_delay)
 {
-    m_burstDelay = (long long)burst_delay * 1000000LL;
+    m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
         m_sampleCounter[i] = 0;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
@@ -89,7 +89,7 @@ uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
     }
     TimeSlot* s = m_timeSlots[cn].at(0);
     
-    long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - (2LL * 2LL * FILTER_DELAY * TIME_PER_SAMPLE);
+    long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - TOTAL_FILTER_DELAY - m_sampleDelay;
 
     if(sample_time >= s->slotTime && s->slotSampleCounter == 0)
     {
@@ -133,7 +133,7 @@ long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &timing, unsigned int
     {
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
-    long long nsec = m_lastSlot[cn] + m_burstDelay;
+    long long nsec = m_lastSlot[cn] + m_sampleDelay;
     TimeSlot *s = new TimeSlot;
     s->slotNo = slot_no;
     s->slotTime = nsec;

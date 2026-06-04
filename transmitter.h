@@ -46,7 +46,6 @@ public:
     void start();
     void run();
     void stop();
-    void join();
     bool stopped() const;
 private:
     void getZMQMessage();
@@ -54,6 +53,7 @@ private:
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
     bool m_running;
     bool m_stopped;
+    bool m_timingInit;
     Device* m_device;
     FMMod* m_fmMod;
     Resampler* m_resampler;

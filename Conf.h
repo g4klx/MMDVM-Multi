@@ -33,7 +33,7 @@ public:
 	// The General section
 	bool         getDaemon() const;
 	unsigned int getNumChannels() const;
-	unsigned int getDelay() const;
+	int 				 getDelay() const;
 	unsigned int getSampleRate() const;
 
 	// The Log section
@@ -62,7 +62,7 @@ private:
 
 	bool         m_daemon;
 	unsigned int m_numChannels;
-	unsigned int m_delay;
+	int 				 m_delay;
 	unsigned int m_sampleRate;
 
 	unsigned int m_logDisplayLevel;
