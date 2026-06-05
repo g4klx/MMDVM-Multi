@@ -21,6 +21,7 @@
 
 #include <thread>
 #include <chrono>
+#include <cmath>
 #include <string>
 #include <cstdint>
 #include <SoapySDR/Device.hpp>
@@ -38,7 +39,8 @@ class Receiver
 {
 public:
     Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
-             Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels, unsigned int num_pfb_channels);
+             Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
+             unsigned int num_pfb_channels, float power_calibration);
     ~Receiver();
     void start();
     void run();
@@ -58,11 +60,13 @@ private:
     unsigned int m_activeChannels;
     unsigned int m_pfbChannels;
     unsigned int m_fillReal;
+    float m_powerCalibration;
     std::thread m_thread;
     zmq::context_t m_zmqCtx[MAX_MMDVM_CHANNELS];
     zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
     std::vector<uint8_t> control_buf[MAX_MMDVM_CHANNELS];
     std::vector<int16_t> data_buf[MAX_MMDVM_CHANNELS];
+    unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
 
 };
 

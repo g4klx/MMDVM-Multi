@@ -21,7 +21,7 @@
 
 Receiver::Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                    Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-                   unsigned int num_pfb_channels) : 
+                   unsigned int num_pfb_channels, float power_calibration) : 
 m_running(true),
 m_stopped(false),
 m_device(device),
@@ -31,7 +31,8 @@ m_rotator(rotator),
 m_channelizer(channelizer),
 m_burstTimer(burst_timer),
 m_activeChannels(num_active_channels),
-m_pfbChannels(num_pfb_channels)
+m_pfbChannels(num_pfb_channels),
+m_powerCalibration(power_calibration)
 {
   assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
   assert(m_pfbChannels > 1U);
@@ -46,6 +47,7 @@ m_pfbChannels(num_pfb_channels)
     m_zmqSocket[i].bind ("ipc:///tmp/mmdvm-rx" + std::to_string(socket_no) + ".ipc");
     data_buf[i].reserve(SAMPLES_PER_SLOT);
     control_buf[i].reserve(SAMPLES_PER_SLOT);
+    m_RSSI[i] = 0U;
   }
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
   max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
@@ -173,9 +175,9 @@ void Receiver::run()
 
     for(unsigned int j=0;j<m_activeChannels;j++)
     {
-      unsigned int rssi = 0;
       if(data_buf[j].size() >= SAMPLES_PER_SLOT)
       {
+        unsigned int rssi = m_RSSI[j];
         uint32_t num_items = SAMPLES_PER_SLOT;
         int buf_size = 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t) + num_items * sizeof(int16_t);
         zmq::message_t reply (buf_size);
@@ -190,6 +192,7 @@ void Receiver::run()
         control_buf[j].erase(control_buf[j].begin(), control_buf[j].begin() + num_items);
         data_buf[j].reserve(SAMPLES_PER_SLOT);
         control_buf[j].reserve(SAMPLES_PER_SLOT);
+        m_RSSI[j] = 0U;
       }
     }
   }
@@ -200,6 +203,16 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
 {
   std::complex<float> resampled[RX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
   m_resampler->downsample(channel, in_samples, RX_INTERP_IN_SIZE, resampled);
+  float sum = 0.0f;
+  for(unsigned i=0;i<RX_SAMP_OUT_SIZE;i++)
+  {
+    sum += (resampled[i].real() * resampled[i].real()) + (resampled[i].imag() * resampled[i].imag());
+  }
+  float rms = std::sqrtf(sum / float(RX_SAMP_OUT_SIZE));
+  float db = 10.0f * std::log10f(rms + 1.0e-20f) - m_powerCalibration;
+  unsigned int rssi = (unsigned int)std::fabs(db); // inverted to positive values since RSSI > 0 dBm is unlikely
+  if(rssi > m_RSSI[channel]) // keep max value since we may span two timeslots, one active one inactive
+    m_RSSI[channel] = rssi;
   m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
 }
 

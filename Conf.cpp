@@ -36,8 +36,9 @@ enum class SECTION {
 CConf::CConf(const std::string& file) :
 m_file(file),
 m_daemon(false),
-m_numChannels(1),
-m_delay(32),
+m_numChannels(1U),
+m_delay(0),
+m_RSSICalibration(0U),
 m_sampleRate(250000),
 m_logDisplayLevel(0U),
 m_modemType("sx"),
@@ -123,6 +124,8 @@ bool CConf::read()
 				m_numChannels = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "Delay") == 0)
 				m_delay = ::atoi(value);
+			else if (::strcmp(key, "RSSICalibration") == 0)
+				m_RSSICalibration = (unsigned int)::atoi(value);
 		} else if (section == SECTION::LOG) {
 			if (::strcmp(key, "DisplayLevel") == 0)
 				m_logDisplayLevel = (unsigned int)::atoi(value);
@@ -180,6 +183,12 @@ int CConf::getDelay() const
 {
 	return m_delay;
 }
+
+unsigned int CConf::getRSSICalibration() const
+{
+	return m_RSSICalibration;
+}
+
 
 unsigned int CConf::getSampleRate() const
 {

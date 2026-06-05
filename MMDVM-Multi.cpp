@@ -91,6 +91,7 @@ int main(int argc, char** argv)
     unsigned int sample_rate = std::max<unsigned int>(conf.getSampleRate(), 125000U);
     unsigned int channel_spacing = 25000U;
     float baseband_shift = 12500.0f;
+    float power_calibration = float(conf.getRSSICalibration());
     if((sample_rate % channel_spacing) != 0)
     {
         ::fprintf(stderr, "MMDVM-Multi: Sample Rate must be a multiple of channel space\n");
@@ -121,7 +122,7 @@ int main(int argc, char** argv)
     FMMod* fm_mod = new FMMod(0.5, active_channels);
     DMRTiming* timing = new DMRTiming(sample_delay);
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
-                                timing, active_channels, num_pfb_channels);
+                                timing, active_channels, num_pfb_channels, power_calibration);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,
                                       timing, active_channels, num_pfb_channels);
 

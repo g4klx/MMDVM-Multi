@@ -34,6 +34,7 @@ public:
 	bool         getDaemon() const;
 	unsigned int getNumChannels() const;
 	int 				 getDelay() const;
+	unsigned int getRSSICalibration() const;
 	unsigned int getSampleRate() const;
 
 	// The Log section
@@ -63,6 +64,7 @@ private:
 	bool         m_daemon;
 	unsigned int m_numChannels;
 	int 				 m_delay;
+	unsigned int m_RSSICalibration;
 	unsigned int m_sampleRate;
 
 	unsigned int m_logDisplayLevel;

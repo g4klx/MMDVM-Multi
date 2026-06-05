@@ -20,6 +20,7 @@
 #define TRANSMITTER_H
 
 #include <complex>
+#include <cmath>
 #include <chrono>
 #include <string>
 #include <thread>
