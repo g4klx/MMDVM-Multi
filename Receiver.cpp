@@ -47,7 +47,7 @@ m_powerCalibration(power_calibration)
     m_zmqSocket[i].bind ("ipc:///tmp/mmdvm-rx" + std::to_string(socket_no) + ".ipc");
     data_buf[i].reserve(SAMPLES_PER_SLOT);
     control_buf[i].reserve(SAMPLES_PER_SLOT);
-    m_RSSI[i] = 0U;
+    m_RSSI[i] = 1024U;
   }
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
   max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
@@ -192,7 +192,7 @@ void Receiver::run()
         control_buf[j].erase(control_buf[j].begin(), control_buf[j].begin() + num_items);
         data_buf[j].reserve(SAMPLES_PER_SLOT);
         control_buf[j].reserve(SAMPLES_PER_SLOT);
-        m_RSSI[j] = 0U;
+        m_RSSI[j] = 1024U;
       }
     }
   }
@@ -210,9 +210,9 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
     sum += sp * sp;
   }
   float rms = std::sqrtf(sum / float(RX_SAMP_OUT_SIZE));
-  float db = 10.0f * std::log10f(rms + 1.0e-20f) - m_powerCalibration;
-  unsigned int rssi = (unsigned int)std::fabs(db); // inverted to positive values since RSSI > 0 dBm is unlikely
-  if(rssi > m_RSSI[channel]) // keep max value since we may span two timeslots, one active one inactive
+  float db = 10.0f * std::log10f(rms + 1.0e-20f) + m_powerCalibration;
+  unsigned int rssi = (unsigned int)std::fabs(db); // invert to positive values since RSSI > 0 dBFs is unlikely
+  if(rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive
     m_RSSI[channel] = rssi;
   m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
 }
