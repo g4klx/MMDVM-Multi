@@ -206,7 +206,8 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
   float sum = 0.0f;
   for(unsigned i=0;i<RX_SAMP_OUT_SIZE;i++)
   {
-    sum += (resampled[i].real() * resampled[i].real()) + (resampled[i].imag() * resampled[i].imag());
+    float sp = (resampled[i].real() * resampled[i].real()) + (resampled[i].imag() * resampled[i].imag());
+    sum += sp * sp;
   }
   float rms = std::sqrtf(sum / float(RX_SAMP_OUT_SIZE));
   float db = 10.0f * std::log10f(rms + 1.0e-20f) - m_powerCalibration;
