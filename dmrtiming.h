@@ -20,19 +20,18 @@
 #define DMRTIMING_H
 
 #include <mutex>
-#include <chrono>
 #include <cstdint>
 #include <vector>
 #include <assert.h>
 #include "constants.h"
 
-class TimeSlot {
+class DMRTimeSlot {
 public:
-    TimeSlot() {}; 
-    ~TimeSlot() {};
+    DMRTimeSlot(uint8_t slot_no, long long slot_time, uint16_t slot_sample_counter); 
+    ~DMRTimeSlot();
     uint8_t slotNo;
     long long slotTime;
-    int16_t slotSampleCounter;
+    uint16_t slotSampleCounter;
 };
 
 class DMRTiming
@@ -40,23 +39,22 @@ class DMRTiming
 public:
     DMRTiming(int sample_delay);
     ~DMRTiming();
-    void setTimer(long long value, unsigned int cn=0);
-    uint8_t checkTime(unsigned int cn=0, bool time_base_received=false);
-    long long allocateSlot(uint8_t slot_no, int64_t &timing, unsigned int cn=0);
-    bool getInit(unsigned int cn=0);
     void lock();
     void unlock();
+    void setTimer(long long value, unsigned int cn=0);
+    bool getInit(unsigned int cn=0);
+    uint8_t checkTime(unsigned int cn=0, bool time_base_received=false);
+    long long allocateSlot(uint8_t slot_no, int64_t &next_slot_timing_correction, unsigned int cn=0);
 
 private:
+    std::mutex m_timingMutex;
     long long getTimeDelta(unsigned int cn=0);
     long long m_sampleDelay;
     bool m_timingInitialized[MAX_MMDVM_CHANNELS];
-    std::mutex m_timingMutex;
-    std::mutex m_slotMutex[MAX_MMDVM_CHANNELS];
     long long m_sampleCounter[MAX_MMDVM_CHANNELS];
     long long m_lastSlot[MAX_MMDVM_CHANNELS];
     long long m_timeBase[MAX_MMDVM_CHANNELS];
-    std::vector<TimeSlot*> m_timeSlots[MAX_MMDVM_CHANNELS];
+    std::vector<DMRTimeSlot*> m_timeSlots[MAX_MMDVM_CHANNELS];
 
 };
 

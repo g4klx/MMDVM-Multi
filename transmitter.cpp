@@ -26,15 +26,15 @@ Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Ro
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
+m_activeChannels(num_active_channels),
+m_pfbChannels(num_pfb_channels),
+m_timingCorrection(0LL),
 m_device(device),
 m_fmMod(fm_mod),
 m_resampler(resampler),
 m_rotator(rotator),
 m_channelizer(channelizer),
-m_burstTimer(burst_timer),
-m_activeChannels(num_active_channels),
-m_pfbChannels(num_pfb_channels),
-m_timingCorrection(0LL)
+m_burstTimer(burst_timer)
 {
   assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
   assert(m_pfbChannels > 1U);
@@ -60,6 +60,7 @@ Transmitter::~Transmitter()
   for(unsigned i = 0;i < m_activeChannels;i++)
   {
     m_zmqSocket[i].close();
+    m_zmqCtx[i].shutdown();
     m_zmqCtx[i].close();
   }
 }
@@ -83,6 +84,7 @@ bool Transmitter::stopped() const
 
 void Transmitter::nextSlot(unsigned int channel)
 {
+  // idle channel will keep DMR timing so other modes can run at the same time
   if(m_sn[channel] == 2)
     m_sn[channel] = 1;
   else
@@ -97,7 +99,7 @@ void Transmitter::getZMQMessage()
     int size = 0;
     zmq::recv_result_t recv_result;
     zmq::message_t request_msg (1);
-    memcpy (request_msg.data(), "s", sizeof(char));
+    ::memcpy (request_msg.data(), "s", sizeof(char));
     m_zmqSocket[j].send (request_msg, zmq::send_flags::none);
     recv_result = m_zmqSocket[j].recv(mq_message);
     size = mq_message.size();
@@ -106,14 +108,14 @@ void Transmitter::getZMQMessage()
       continue;
     }
     unsigned int buf_size = 0;
-    memcpy(&buf_size, (uint8_t*)mq_message.data(), sizeof(uint32_t));
+    ::memcpy(&buf_size, (uint8_t*)mq_message.data(), sizeof(uint32_t));
     if(buf_size == SAMPLES_PER_SLOT)
     {
       uint8_t control[SAMPLES_PER_SLOT];
       int16_t data[SAMPLES_PER_SLOT];
-      memcpy(&control, (uint8_t*)mq_message.data() + sizeof(uint32_t), buf_size * sizeof(uint8_t));
+      ::memcpy(&control, (uint8_t*)mq_message.data() + sizeof(uint32_t), buf_size * sizeof(uint8_t));
       
-      memcpy(&data, (uint8_t*)mq_message.data() + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
+      ::memcpy(&data, (uint8_t*)mq_message.data() + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
              buf_size * sizeof(int16_t));
       for(unsigned i=0; i<buf_size; i++)
       {
@@ -157,15 +159,16 @@ void Transmitter::run()
 
     if(m_timingCorrection > 0)
     {
+      // don't attempt to get next batch of samples too fast, DMRTX generates them on demand
       std::this_thread::sleep_for(std::chrono::nanoseconds(m_timingCorrection));
       m_timingCorrection = 0;
     }
 
     bool channel_idle[MAX_MMDVM_CHANNELS];
-    for(int i=0;i<MAX_MMDVM_CHANNELS;i++)
+    for(unsigned i=0;i<MAX_MMDVM_CHANNELS;i++)
       channel_idle[i] = false;
 
-    m_burstTimer->lock();
+    m_burstTimer->lock(); // need to wait for all RX channels to have up-to-date time reference
     for(unsigned i=0;i<m_activeChannels;i++)
     {
       long long time = 0LL;
@@ -207,8 +210,8 @@ void Transmitter::run()
     processSamples(output_samples, channel_idle);
     void *buffs[1] = {(void*)output_samples};
     int flags = 0;
-    if(timeNs > 0LL)
-      flags = SOAPY_SDR_HAS_TIME;
+    if(timeNs > 0LL)   // only needed if there is at least one DMR channel or one idle channel with time info
+      flags |= SOAPY_SDR_HAS_TIME;
     int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_SAMP_OUT_SIZE, flags, timeNs);
     if (ret <= 0)
     {
@@ -231,7 +234,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
       {
         for(unsigned j=0;j<SAMPLES_PER_SLOT;j++)
         {
-          freq_modulated[j] = {1.0e-9f, 1.0e-9f};
+          freq_modulated[j] = {1.0e-9f, 1.0e-9f}; // zero it but keep next phase step in freqmod
         }
       }
       std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0f, 0.0f};

@@ -44,8 +44,8 @@ m_pfbChannels(num_pfb_channels)
     m_zmqSocket[i].set(zmq::sockopt::linger, 0);
     int socket_no = i + 1;
     m_zmqSocket[i].bind ("ipc:///tmp/mmdvm-rx" + std::to_string(socket_no) + ".ipc");
-    data_buf[i].reserve(2 * SAMPLES_PER_SLOT);
-    control_buf[i].reserve(2 * SAMPLES_PER_SLOT);
+    data_buf[i].reserve(SAMPLES_PER_SLOT);
+    control_buf[i].reserve(SAMPLES_PER_SLOT);
   }
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
   max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
@@ -57,6 +57,7 @@ Receiver::~Receiver()
   for(unsigned i = 0;i < m_activeChannels;i++)
   {
     m_zmqSocket[i].close();
+    m_zmqCtx[i].shutdown();
     m_zmqCtx[i].close();
   }
 }
@@ -95,7 +96,7 @@ void Receiver::run()
     }
     else if(ret != RX_SAMP_IN_SIZE)
     {
-      ::fprintf(stderr, "Underrun occurred while reading samples to device, only read %d samples!\n", ret);
+      ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
       std::this_thread::sleep_for(std::chrono::milliseconds(3));
       continue;
     }
@@ -119,6 +120,18 @@ void Receiver::run()
       }
     }
 
+//    First four usable channels are on the real side of the FFT, the rest in imag,
+//    reversed order to minimize occupied BW
+//    Channel 5 of the PFB (how many total??) wraps around to the imag side and is not usable
+//
+//    Channel 7    Channel 6     Channel 5     Channel 1       Channel 2     Channel 3     Channel 4
+//    434.7500     433.7750      434.8000      434.8250        434.8500      434.8750      434.9000
+//    |             |            |             |               |             |              |
+//    |             |            |             |               |             |              |
+//    |             |            |             |               |             |              |
+// ---|-------------|------------|-------------|---------------|-------------|--------------|---------
+//                                         RX/TX frequency
+//
     for (unsigned k=0; k<m_fillReal; k++)
     {
       for(unsigned j=0;j<RX_INTERP_IN_SIZE;j++)
@@ -166,16 +179,17 @@ void Receiver::run()
         uint32_t num_items = SAMPLES_PER_SLOT;
         int buf_size = 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t) + num_items * sizeof(int16_t);
         zmq::message_t reply (buf_size);
-        memcpy (reply.data (), &num_items, sizeof(uint32_t));
-        memcpy ((unsigned char *)reply.data () + sizeof(uint32_t), &rssi, sizeof(uint32_t));
-        memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t), (unsigned char *)control_buf[j].data(), num_items * sizeof(uint8_t));
-        memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t),
+        ::memcpy (reply.data (), &num_items, sizeof(uint32_t));
+        ::memcpy ((unsigned char *)reply.data () + sizeof(uint32_t), &rssi, sizeof(uint32_t));
+        ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t),
+                  (unsigned char *)control_buf[j].data(), num_items * sizeof(uint8_t));
+        ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t),
                 (unsigned char *)data_buf[j].data(), num_items*sizeof(int16_t));
         m_zmqSocket[j].send (reply, zmq::send_flags::dontwait);
         data_buf[j].erase(data_buf[j].begin(), data_buf[j].begin() + num_items);
         control_buf[j].erase(control_buf[j].begin(), control_buf[j].begin() + num_items);
-        data_buf[j].reserve(2 * SAMPLES_PER_SLOT);
-        control_buf[j].reserve(2 * SAMPLES_PER_SLOT);
+        data_buf[j].reserve(SAMPLES_PER_SLOT);
+        control_buf[j].reserve(SAMPLES_PER_SLOT);
       }
     }
   }

@@ -20,6 +20,7 @@
 #define TRANSMITTER_H
 
 #include <complex>
+#include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
@@ -34,7 +35,6 @@
 #include "rotator.h"
 #include "channelizer.h"
 
-#define MAX_MMDVM_CHANNELS 7
 
 class Transmitter
 {
@@ -47,13 +47,20 @@ public:
     void run();
     void stop();
     bool stopped() const;
+
 private:
     void getZMQMessage();
     void nextSlot(unsigned int channel);
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
+
+
     bool m_running;
     bool m_stopped;
     bool m_timingInit;
+    unsigned int  m_activeChannels;
+    unsigned int  m_pfbChannels;
+    unsigned int m_fillReal;
+    int64_t m_timingCorrection;
     Device* m_device;
     FMMod* m_fmMod;
     Resampler* m_resampler;
@@ -67,10 +74,6 @@ private:
     std::vector<float> data_buf[MAX_MMDVM_CHANNELS];
     uint8_t m_sn[MAX_MMDVM_CHANNELS];
     std::vector<std::complex<float>> m_outputBuffer;
-    unsigned int  m_activeChannels;
-    unsigned int  m_pfbChannels;
-    unsigned int m_fillReal;
-    int64_t m_timingCorrection;
 
 };
 

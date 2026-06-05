@@ -18,8 +18,8 @@
  */
 
 #include <thread>
-#include <string>
 #include <chrono>
+#include <string>
 #include <csignal>
 #include <cmath>
 #include "constants.h"

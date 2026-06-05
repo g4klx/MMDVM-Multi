@@ -62,6 +62,7 @@ void Resampler::upsample(unsigned int channel, std::complex<float>* in_samples,
 void Resampler::downsample(unsigned int channel, std::complex<float>* in_samples,
                            unsigned int num_samples, std::complex<float>* out_samples)
 {
+  // interpolation and decimation are reversed when downsampling
   unsigned int p_in = num_samples / m_interp;
   std::complex<float>* in_buf = new std::complex<float>[m_interp];
   std::complex<float>* out_buf = new std::complex<float>[m_decim];

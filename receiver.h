@@ -20,6 +20,7 @@
 #define RECEIVER_H
 
 #include <thread>
+#include <chrono>
 #include <string>
 #include <cstdint>
 #include <SoapySDR/Device.hpp>

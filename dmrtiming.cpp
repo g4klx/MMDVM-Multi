@@ -18,9 +18,21 @@
 
 #include "dmrtiming.h"
 
+DMRTimeSlot::DMRTimeSlot(uint8_t slot_no, long long slot_time, uint16_t slot_sample_counter) :
+slotNo(slot_no),
+slotTime(slot_time),
+slotSampleCounter(slot_sample_counter)
+{
+}
+
+DMRTimeSlot::~DMRTimeSlot()
+{
+}
+
+
 DMRTiming::DMRTiming(int sample_delay)
 {
-    m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE;
+    m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE; // used to adjust SYNC sample position in MMDVM 
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
         m_sampleCounter[i] = 0;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
@@ -36,9 +48,7 @@ DMRTiming::~DMRTiming()
     for(unsigned k = 0;k < MAX_MMDVM_CHANNELS;k++)
     {
         for(unsigned i=0;i<m_timeSlots[k].size();i++)
-        {
             delete m_timeSlots[k].at(i);
-        }
         m_timeSlots[k].clear();
     }
 }
@@ -78,20 +88,14 @@ bool DMRTiming::getInit(unsigned int cn)
 uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
-    if(!time_base_received)
-    {
+    if(!time_base_received) // not the first sample in the batch
         m_sampleCounter[cn]++;
-    }
-    std::scoped_lock<std::mutex> guard(m_slotMutex[cn]);
-    if(m_timeSlots[cn].size() < 1)
-    {
+    if(m_timeSlots[cn].size() < 1) // probably not a DMR or idle channel
         return 0;
-    }
-    TimeSlot* s = m_timeSlots[cn].at(0);
-    
-    long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - TOTAL_FILTER_DELAY - m_sampleDelay;
 
-    if(sample_time >= s->slotTime && s->slotSampleCounter == 0)
+    long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - TOTAL_FILTER_DELAY - m_sampleDelay;
+    DMRTimeSlot* s = m_timeSlots[cn].at(0);
+    if(sample_time >= s->slotTime && s->slotSampleCounter == 0U)
     {
         s->slotSampleCounter++;
         return s->slotNo;
@@ -109,16 +113,14 @@ uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
     return 0;
 }
 
-long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &timing, unsigned int cn)
+long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &next_slot_timing_correction, unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
     long long elapsed = getTimeDelta(cn);
     if(elapsed <= m_lastSlot[cn])
     {
         if(cn == 0)
-        {
-            timing = m_lastSlot[cn] - elapsed;
-        }
+            next_slot_timing_correction = m_lastSlot[cn] - elapsed;
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
     else if(m_lastSlot[cn] == 0)
@@ -134,11 +136,7 @@ long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &timing, unsigned int
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
     long long nsec = m_lastSlot[cn] + m_sampleDelay;
-    TimeSlot *s = new TimeSlot;
-    s->slotNo = slot_no;
-    s->slotTime = nsec;
-    s->slotSampleCounter = 0;
-    std::unique_lock<std::mutex> guard(m_slotMutex[cn]);
+    DMRTimeSlot *s = new DMRTimeSlot(slot_no, nsec, 0U);
     m_timeSlots[cn].push_back(s);
     return nsec;
 }
