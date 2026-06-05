@@ -23,7 +23,7 @@
 #include <cstdint>
 #include <vector>
 #include <assert.h>
-#include "constants.h"
+#include "Constants.h"
 
 class DMRTimeSlot {
 public:

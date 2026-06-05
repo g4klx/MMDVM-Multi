@@ -25,13 +25,13 @@
 #include <cstdint>
 #include <SoapySDR/Device.hpp>
 #include <zmq.hpp>
-#include "device.h"
-#include "constants.h"
-#include "dmrtiming.h"
-#include "fmmod.h"
-#include "resampler.h"
-#include "rotator.h"
-#include "channelizer.h"
+#include "Device.h"
+#include "Constants.h"
+#include "DMRTiming.h"
+#include "FMMod.h"
+#include "Resampler.h"
+#include "Rotator.h"
+#include "Channelizer.h"
 
 
 class Receiver

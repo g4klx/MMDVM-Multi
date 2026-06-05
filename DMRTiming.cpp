@@ -16,7 +16,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "dmrtiming.h"
+#include "DMRTiming.h"
 
 DMRTimeSlot::DMRTimeSlot(uint8_t slot_no, long long slot_time, uint16_t slot_sample_counter) :
 slotNo(slot_no),

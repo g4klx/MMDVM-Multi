@@ -16,26 +16,27 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#ifndef SYNTHANALYSIS_H
+#define SYNTHANALYSIS_H
 
 #include <complex>
-#include <string.h>
+#include <cmath>
 #include <liquid/liquid.h>
-#include "constants.h"
+#include "Constants.h"
 
-class Rotator
+
+class Channelizer
 {
 public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
-private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
+    Channelizer(unsigned int num_pfb_channels);
+    ~Channelizer();
+    void synthesize(std::complex<float>* in_samples, std::complex<float>* out_samples);
+    void channelize(std::complex<float>* in_samples, std::complex<float>* out_samples);
 
+private:
+    unsigned int m_channels;
+    firpfbch_crcf m_synthesizer;
+    firpfbch_crcf m_analyzer;
 };
 
-#endif // ROTATOR_H
+#endif // SYNTHANALYSIS_H

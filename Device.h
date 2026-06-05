@@ -22,7 +22,7 @@
 #include <string>
 #include <SoapySDR/Device.hpp>
 #include <SoapySDR/Logger.hpp>
-#include "constants.h"
+#include "Constants.h"
 
 
 class Device

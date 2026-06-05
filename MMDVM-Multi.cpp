@@ -22,15 +22,15 @@
 #include <string>
 #include <csignal>
 #include <cmath>
-#include "constants.h"
-#include "device.h"
-#include "dmrtiming.h"
-#include "receiver.h"
-#include "transmitter.h"
-#include "fmmod.h"
-#include "resampler.h"
-#include "rotator.h"
-#include "channelizer.h"
+#include "Constants.h"
+#include "Device.h"
+#include "DMRTiming.h"
+#include "Receiver.h"
+#include "Transmitter.h"
+#include "FMMod.h"
+#include "Resampler.h"
+#include "Rotator.h"
+#include "Channelizer.h"
 #include "Conf.h"
 
 const char* DEFAULT_INI_FILE = "/etc/MMDVM-Multi.ini";

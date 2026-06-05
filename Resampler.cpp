@@ -17,7 +17,7 @@
  */
 
 #include <assert.h>
-#include "resampler.h"
+#include "Resampler.h"
 
 Resampler::Resampler(unsigned interp, unsigned decim, float bw, unsigned int num_channels) :
 m_decim(decim),

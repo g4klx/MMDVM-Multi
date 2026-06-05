@@ -17,7 +17,7 @@
  */
 
 #include <assert.h>
-#include "transmitter.h"
+#include "Transmitter.h"
 
 
 Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,

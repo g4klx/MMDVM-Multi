@@ -16,7 +16,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "receiver.h"
+#include "Receiver.h"
 
 
 Receiver::Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,

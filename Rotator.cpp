@@ -16,7 +16,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "rotator.h"
+#include "Rotator.h"
 
 Rotator::Rotator(float rotation_hz, float sample_rate)
 {

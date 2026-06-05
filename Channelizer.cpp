@@ -16,7 +16,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "channelizer.h"
+#include "Channelizer.h"
 #include <assert.h>
 
 Channelizer::Channelizer(unsigned int num_pfb_channels) :

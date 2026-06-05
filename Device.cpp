@@ -18,7 +18,7 @@
  */
 
 #include <assert.h>
-#include "device.h"
+#include "Device.h"
 
 Device::Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
                float rxGain, float txGain, std::string rxAntenna, std::string txAntenna, bool debug) :

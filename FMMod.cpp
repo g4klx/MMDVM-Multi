@@ -16,7 +16,7 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "fmmod.h"
+#include "FMMod.h"
 #include <assert.h>
 
 FMMod::FMMod(float deviation, unsigned int num_channels) :

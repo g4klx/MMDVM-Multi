@@ -22,7 +22,7 @@
 #include <complex>
 #include <string.h>
 #include <liquid/liquid.h>
-#include "constants.h"
+#include "Constants.h"
 
 class Resampler
 {
