@@ -48,12 +48,12 @@ m_soapyInit(false)
   const char* PLUTO_DEFAULT_URI = "ip:pluto.local";
 
   if (m_soapyDeviceType.compare("plutosdr") == 0 || m_soapyDeviceType.compare("pluto") == 0) {
-    const char* uri = deviceType.empty() ? PLUTO_DEFAULT_URI : deviceType.c_str();
+    const char* uri = m_soapyDeviceURI.empty() ? PLUTO_DEFAULT_URI : m_soapyDeviceURI.c_str();
     devArgs["driver"] = "plutosdr";
     rxArgs["uri"]     = uri;
     txArgs["uri"]     = uri;
     ::fprintf(stdout, "Using Pluto SDR driver uri %s\n", uri);
-  } else if (deviceType.compare("limesdr") == 0 || deviceType.compare("lime") == 0) {
+  } else if (m_soapyDeviceType.compare("limesdr") == 0 || m_soapyDeviceType.compare("lime") == 0) {
     const char* uri = m_soapyDeviceURI.empty() ? LIME_DEFAULT_URI : m_soapyDeviceURI.c_str();
     devArgs["driver"] = "lime";
     rxArgs["uri"]     = uri;
@@ -92,8 +92,13 @@ m_soapyInit(false)
     
     assert(m_rxStream != nullptr);
     assert(m_txStream != nullptr);
-    
+
+    unsigned int rxStreamMTU = m_device->getStreamMTU(m_rxStream);
+    unsigned int txStreamMTU = m_device->getStreamMTU(m_txStream);
+
     ::fprintf(stdout, "Soapy device initialized\n");
+    ::fprintf(stdout, "RX stream MTU is %d\n", rxStreamMTU);
+    ::fprintf(stdout, "TX stream MTU is %d\n", txStreamMTU);
     m_soapyInit = true;
   } catch (std::runtime_error &e) {
     ::fprintf(stderr, "Soapy device failed to initialize\n");

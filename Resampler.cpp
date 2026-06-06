@@ -76,4 +76,12 @@ void Resampler::downsample(unsigned int channel, std::complex<float>* in_samples
   delete[] out_buf;
 }
 
+unsigned int Resampler::getDecim() const
+{
+  return m_decim;
+}
 
+unsigned int Resampler::getInterp() const
+{
+  return m_interp;
+}

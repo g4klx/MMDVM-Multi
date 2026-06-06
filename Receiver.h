@@ -40,7 +40,7 @@ class Receiver
 public:
     Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
              Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-             unsigned int num_pfb_channels, float power_calibration);
+             unsigned int num_pfb_channels, float power_calibration, bool needs_timestamp);
     ~Receiver();
     void start();
     void run();
@@ -51,6 +51,7 @@ private:
     void processSamples(unsigned int channel, std::complex<float>* in_samples, float* output_samples);
     bool m_running;
     bool m_stopped;
+    bool m_timestamping;
     Device* m_device;
     FMMod* m_fmMod;
     Resampler* m_resampler;
@@ -61,11 +62,13 @@ private:
     unsigned int m_pfbChannels;
     unsigned int m_fillReal;
     unsigned int m_powerCalibration;
+    long long m_readTime;
     std::thread m_thread;
     zmq::context_t m_zmqCtx[MAX_MMDVM_CHANNELS];
     zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<int16_t> m_dataBuf[MAX_MMDVM_CHANNELS];
+    std::vector<std::complex<float>> m_readBuffer;
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
 
 };

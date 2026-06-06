@@ -209,15 +209,24 @@ void Transmitter::run()
 
     std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
     processSamples(output_samples, channel_idle);
-    void *buffs[1] = {(void*)output_samples};
+    m_writeBuffer.insert(m_writeBuffer.end(), output_samples, output_samples + TX_INTERP_OUT_SIZE * m_pfbChannels);
+    void *buffs[1] = {(void*)m_writeBuffer.data()};
     int flags = 0;
     if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
       flags |= SOAPY_SDR_HAS_TIME;
-    int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_SAMP_OUT_SIZE, flags, timeNs);
+
+
+    // FIXME: Pluto stream MTU !!
+    int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, m_writeBuffer.size(), flags, timeNs);
     if (ret <= 0)
     {
       ::fprintf(stderr,"Error writing samples to device: %s\n", SoapySDR_errToStr(ret));
     }
+    else if ((unsigned int)ret != (TX_INTERP_OUT_SIZE * m_pfbChannels))
+    {
+      ::fprintf(stderr,"TX overrun occured, only wrote %d samples!\n", ret);
+    }
+    m_writeBuffer.erase(m_writeBuffer.begin(), m_writeBuffer.begin() + TX_INTERP_OUT_SIZE * m_pfbChannels);
   }
   m_stopped = true;
 }
@@ -261,6 +270,6 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
     }
     m_channelizer->synthesize(channels, &channelized[i*m_pfbChannels]);
   }
-  m_rotator->rotate(channelized, TX_SAMP_OUT_SIZE, output_samples);
+  m_rotator->rotate(channelized, TX_INTERP_OUT_SIZE * m_pfbChannels, output_samples);
 }
 

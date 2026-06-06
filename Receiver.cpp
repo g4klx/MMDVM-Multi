@@ -21,9 +21,10 @@
 
 Receiver::Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                    Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-                   unsigned int num_pfb_channels, float power_calibration) : 
+                   unsigned int num_pfb_channels, float power_calibration, bool needs_timestamp) : 
 m_running(true),
 m_stopped(false),
+m_timestamping(needs_timestamp),
 m_device(device),
 m_fmMod(fm_mod),
 m_resampler(resampler),
@@ -32,7 +33,8 @@ m_channelizer(channelizer),
 m_burstTimer(burst_timer),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
-m_powerCalibration(power_calibration)
+m_powerCalibration(power_calibration),
+m_readTime(0LL)
 {
   assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
   assert(m_pfbChannels > 1U);
@@ -52,6 +54,7 @@ m_powerCalibration(power_calibration)
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
   max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
   m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
+  m_readBuffer.reserve(RX_SAMP_IN_SIZE);
 }
 
 Receiver::~Receiver()
@@ -89,22 +92,33 @@ void Receiver::run()
     long long timeNs = 0LL;
     
     int flags = 0;
-    int ret = m_device->getDevice()->readStream(m_device->getRxStream(), buffs, RX_SAMP_IN_SIZE, flags, timeNs);
+    int ret = m_device->getDevice()->readStream(m_device->getRxStream(), buffs, RX_INTERP_IN_SIZE * m_pfbChannels, flags, timeNs);
     if (ret <= 0)
     {
       ::fprintf(stderr, "Error reading samples from device: %s\n", SoapySDR_errToStr(ret));
       std::this_thread::sleep_for(std::chrono::milliseconds(3));
       continue;
     }
-    else if(ret != RX_SAMP_IN_SIZE)
-    {
+
+    // FIXME: Pluto stream MTU
+    if((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels) 
       ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
+
+    m_readBuffer.insert(m_readBuffer.end(), read_buffer, read_buffer + (unsigned int)ret);
+    m_readTime += (long long)ret * (TIME_PER_SAMPLE * (long long)m_resampler->getInterp() 
+                          / (long long)m_resampler->getDecim() * (long long)m_pfbChannels);
+
+    if(m_readBuffer.size() < RX_INTERP_IN_SIZE * m_pfbChannels)
+    {
       std::this_thread::sleep_for(std::chrono::milliseconds(3));
       continue;
     }
 
+    if(!m_timestamping)
+      timeNs = m_readTime;
+
     std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0f, 0.0f};
-    m_rotator->derotate(read_buffer, RX_SAMP_IN_SIZE, rotated);
+    m_rotator->derotate(m_readBuffer.data(), RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
 
     std::complex<float> channelized1[RX_INTERP_IN_SIZE][MAX_PFB_CHANNELS] = {{0.0f, 0.0f}};
     std::complex<float> channelized2[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0f, 0.0f}};
@@ -195,6 +209,8 @@ void Receiver::run()
         m_RSSI[j] = 1024U;
       }
     }
+
+    m_readBuffer.erase(m_readBuffer.begin(), m_readBuffer.begin() + RX_INTERP_IN_SIZE * m_pfbChannels);
   }
   m_stopped = true;
 }
