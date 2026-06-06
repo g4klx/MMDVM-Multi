@@ -32,17 +32,19 @@ static const long long SAMPLES_PER_SLOT = 720LL;   // at 24k
 
 static const unsigned int MAX_MMDVM_CHANNELS = 7U;
 static const unsigned int MAX_PFB_CHANNELS = 24U;  // max sample rate 600k
+static const unsigned int MAX_SAMPLE_RATE = 600000U;
 static const unsigned int PFB_FILTER_DELAY = 48U;  // must reduce on RPi platforms if bursts are consistently late due to CPU load
 static const unsigned int RESAMPLER_FILTER_DELAY = 24U; // ntaps = 2 * delay + 1
 static const long long TOTAL_FILTER_DELAY = ((2LL * RESAMPLER_FILTER_DELAY) + (2LL * PFB_FILTER_DELAY)) * TIME_PER_SAMPLE;
 
 static const float TX_DAC_SCALING = 0.35f;  // aim for 0 dBm divided across channels at 64 dB gain, Lime PA linear zone
 
-// the following entries are specific for a sample rate of 250k (Lime, Pluto)
-// TODO: handle SXCeiver sample rates
+// these two values are set for a sample rate of 600k max
 static const unsigned int TX_SAMP_OUT_SIZE = 18000U;
-static const unsigned int TX_INTERP_OUT_SIZE = 750U;
 static const unsigned int RX_SAMP_IN_SIZE = 1800U;
+
+
+static const unsigned int TX_INTERP_OUT_SIZE = 750U;
 static const unsigned int RX_INTERP_IN_SIZE = 75U;
 static const unsigned int RX_SAMP_OUT_SIZE = 72U;
 

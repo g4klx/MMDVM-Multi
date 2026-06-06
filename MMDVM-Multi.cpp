@@ -86,19 +86,24 @@ int main(int argc, char** argv)
     unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
     active_channels = std::max<unsigned int>(active_channels, 1U);
     int sample_delay = conf.getDelay(); // can be negative
-    unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), 600000U);
+    unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
     unsigned int interpolation = 25U;
     unsigned int decimation = 24U;
     unsigned int channel_spacing = 25000U;
     float baseband_shift = 12500.0f;
     float fractional_bandwidth = 0.4f;
     unsigned int power_calibration = conf.getRSSICalibration();
-    if((sample_rate % channel_spacing) != 0)
+    if((sample_rate % channel_spacing) != 0U)
     {
         ::fprintf(stderr, "MMDVM-Multi: Sample Rate must be a multiple of channel space\n");
         return 1;
     }
     unsigned int num_pfb_channels = sample_rate / channel_spacing;
+    if(num_pfb_channels > MAX_PFB_CHANNELS)
+    {
+        ::fprintf(stderr, "MMDVM-Multi: The sample rate %d is not supported\n", sample_rate);
+        return 1;
+    }
     if(active_channels >= num_pfb_channels)
     {
         ::fprintf(stderr, "MMDVM-Multi: The number of channels must be lower than %d for this sample rate\n", num_pfb_channels);
