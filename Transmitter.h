@@ -71,8 +71,8 @@ private:
     std::thread m_thread;
     zmq::context_t m_zmqCtx[MAX_MMDVM_CHANNELS];
     zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
-    std::vector<uint8_t> control_buf[MAX_MMDVM_CHANNELS];
-    std::vector<float> data_buf[MAX_MMDVM_CHANNELS];
+    std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
+    std::vector<float> m_dataBuf[MAX_MMDVM_CHANNELS];
     uint8_t m_sn[MAX_MMDVM_CHANNELS];
     std::vector<std::complex<float>> m_outputBuffer;
 

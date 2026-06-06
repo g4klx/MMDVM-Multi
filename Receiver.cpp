@@ -45,8 +45,8 @@ m_powerCalibration(power_calibration)
     m_zmqSocket[i].set(zmq::sockopt::linger, 0);
     int socket_no = i + 1;
     m_zmqSocket[i].bind ("ipc:///tmp/mmdvm-rx" + std::to_string(socket_no) + ".ipc");
-    data_buf[i].reserve(SAMPLES_PER_SLOT);
-    control_buf[i].reserve(SAMPLES_PER_SLOT);
+    m_dataBuf[i].reserve(SAMPLES_PER_SLOT);
+    m_controlBuf[i].reserve(SAMPLES_PER_SLOT);
     m_RSSI[i] = 1024U;
   }
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
@@ -167,15 +167,15 @@ void Receiver::run()
         s = (s > 32767) ? 32767 : s;
         s = (s < -32767) ? -32767 : s;
         int16_t sample = int16_t(s);
-        data_buf[j].push_back(sample);
-        control_buf[j].push_back(control);
+        m_dataBuf[j].push_back(sample);
+        m_controlBuf[j].push_back(control);
       }
     }
     m_burstTimer->unlock();
 
     for(unsigned int j=0;j<m_activeChannels;j++)
     {
-      if(data_buf[j].size() >= SAMPLES_PER_SLOT)
+      if(m_dataBuf[j].size() >= SAMPLES_PER_SLOT)
       {
         unsigned int rssi = m_RSSI[j];
         uint32_t num_items = SAMPLES_PER_SLOT;
@@ -184,14 +184,14 @@ void Receiver::run()
         ::memcpy (reply.data (), &num_items, sizeof(uint32_t));
         ::memcpy ((unsigned char *)reply.data () + sizeof(uint32_t), &rssi, sizeof(uint32_t));
         ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t),
-                  (unsigned char *)control_buf[j].data(), num_items * sizeof(uint8_t));
+                  (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
         ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                (unsigned char *)data_buf[j].data(), num_items*sizeof(int16_t));
+                (unsigned char *)m_dataBuf[j].data(), num_items*sizeof(int16_t));
         m_zmqSocket[j].send (reply, zmq::send_flags::dontwait);
-        data_buf[j].erase(data_buf[j].begin(), data_buf[j].begin() + num_items);
-        control_buf[j].erase(control_buf[j].begin(), control_buf[j].begin() + num_items);
-        data_buf[j].reserve(SAMPLES_PER_SLOT);
-        control_buf[j].reserve(SAMPLES_PER_SLOT);
+        m_dataBuf[j].erase(m_dataBuf[j].begin(), m_dataBuf[j].begin() + num_items);
+        m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
+        m_dataBuf[j].reserve(SAMPLES_PER_SLOT);
+        m_controlBuf[j].reserve(SAMPLES_PER_SLOT);
         m_RSSI[j] = 1024U;
       }
     }
@@ -206,12 +206,12 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
   float sum = 0.0f;
   for(unsigned i=0;i<RX_SAMP_OUT_SIZE;i++)
   {
-    float sp = (resampled[i].real() * resampled[i].real()) + (resampled[i].imag() * resampled[i].imag());
-    sum += sp * sp;
+    sum += std::norm(resampled[i]);
   }
-  float rms = std::sqrtf(sum / float(RX_SAMP_OUT_SIZE));
-  float db = 10.0f * std::log10f(rms + 1.0e-20f) + m_powerCalibration;
-  unsigned int rssi = (unsigned int)std::fabs(db); // invert to positive values since RSSI > 0 dBFs is unlikely
+  float rms = std::sqrtf(((sum + 1.0e-20f) / float(RX_SAMP_OUT_SIZE)) / 2.0f);
+  float pow = (rms * rms) / 50.0f;
+  float dbFS = 10.0f * std::log10f(pow + 1.0e-20f);
+  unsigned int rssi = (unsigned int)std::fabs(dbFS) + m_powerCalibration; // invert to positive, RSSI > 0 dBFs is unlikely
   if(rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive
     m_RSSI[channel] = rssi;
   m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);

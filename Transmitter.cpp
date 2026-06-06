@@ -119,8 +119,8 @@ void Transmitter::getZMQMessage()
              buf_size * sizeof(int16_t));
       for(unsigned i=0; i<buf_size; i++)
       {
-        control_buf[j].push_back(control[i]);
-        data_buf[j].push_back(float(data[i])/32767.0f);
+        m_controlBuf[j].push_back(control[i]);
+        m_dataBuf[j].push_back(float(data[i])/32767.0f);
       }
     }
   }
@@ -172,11 +172,11 @@ void Transmitter::run()
     for(unsigned i=0;i<m_activeChannels;i++)
     {
       long long time = 0LL;
-      if(data_buf[i].size() < 1)
+      if(m_dataBuf[i].size() < 1)
       {
         channel_idle[i] = true;
-        data_buf[i].insert(data_buf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
-        control_buf[i].insert(control_buf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
+        m_dataBuf[i].insert(m_dataBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
+        m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
@@ -184,9 +184,9 @@ void Transmitter::run()
       }
       else
       {
-        for(unsigned j=0;j<control_buf[i].size();j++)
+        for(unsigned j=0;j<m_controlBuf[i].size();j++)
         {
-          uint8_t control = control_buf[i].at(j);
+          uint8_t control = m_controlBuf[i].at(j);
           if(control == MARK_SLOT1)
           {
             m_sn[i] = 1;
@@ -226,10 +226,10 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
   std::complex<float> channelizer_samples[MAX_MMDVM_CHANNELS][TX_INTERP_OUT_SIZE] = {{0.0f, 0.0f}};
   for(unsigned i=0;i<m_activeChannels;i++)
   {
-    if(data_buf[i].size() >= SAMPLES_PER_SLOT)
+    if(m_dataBuf[i].size() >= SAMPLES_PER_SLOT)
     {
       std::complex<float> freq_modulated[SAMPLES_PER_SLOT] = {0.0f, 0.0f};
-      m_fmMod->modulate(i, data_buf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
+      m_fmMod->modulate(i, m_dataBuf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
       if(channel_idle[i])
       {
         for(unsigned j=0;j<SAMPLES_PER_SLOT;j++)
@@ -240,8 +240,8 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
       std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0f, 0.0f};
       m_resampler->upsample(i, freq_modulated, SAMPLES_PER_SLOT, resampled);
       ::memcpy(&channelizer_samples[i][0], resampled, TX_INTERP_OUT_SIZE * sizeof(std::complex<float>));
-      data_buf[i].erase(data_buf[i].begin(), data_buf[i].begin() + SAMPLES_PER_SLOT);
-      control_buf[i].erase(control_buf[i].begin(), control_buf[i].begin() + SAMPLES_PER_SLOT);
+      m_dataBuf[i].erase(m_dataBuf[i].begin(), m_dataBuf[i].begin() + SAMPLES_PER_SLOT);
+      m_controlBuf[i].erase(m_controlBuf[i].begin(), m_controlBuf[i].begin() + SAMPLES_PER_SLOT);
     }
   }
   
