@@ -42,7 +42,7 @@ class Transmitter
 public:
     Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                 Channelizer* channelizer, DMRTiming* burst_timer,
-                unsigned int num_active_channels, unsigned int num_pfb_channels);
+                unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp);
     ~Transmitter();
     void start();
     void run();
@@ -54,10 +54,10 @@ private:
     void nextSlot(unsigned int channel);
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
 
-
     bool m_running;
     bool m_stopped;
     bool m_timingInit;
+    bool m_timestamping;
     unsigned int  m_activeChannels;
     unsigned int  m_pfbChannels;
     unsigned int m_fillReal;

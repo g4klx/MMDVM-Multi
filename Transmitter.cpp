@@ -22,10 +22,11 @@
 
 Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                          Channelizer* channelizer, DMRTiming* burst_timer,
-                         unsigned int num_active_channels, unsigned int num_pfb_channels) : 
+                         unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp) : 
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
+m_timestamping(needs_timestamp),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
 m_timingCorrection(0LL),
@@ -210,7 +211,7 @@ void Transmitter::run()
     processSamples(output_samples, channel_idle);
     void *buffs[1] = {(void*)output_samples};
     int flags = 0;
-    if(timeNs > 0LL)   // only needed if there is at least one DMR channel or one idle channel with time info
+    if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
       flags |= SOAPY_SDR_HAS_TIME;
     int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_SAMP_OUT_SIZE, flags, timeNs);
     if (ret <= 0)

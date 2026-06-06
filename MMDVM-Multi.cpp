@@ -86,11 +86,12 @@ int main(int argc, char** argv)
     unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
     active_channels = std::max<unsigned int>(active_channels, 1U);
     int sample_delay = conf.getDelay(); // can be negative
-    std::string deviceType = conf.getModemType();
-    std::string modemURI = conf.getModemURI();
     unsigned int sample_rate = std::max<unsigned int>(conf.getSampleRate(), 125000U);
+    unsigned int interpolation = 25U;
+    unsigned int decimation = 24U;
     unsigned int channel_spacing = 25000U;
     float baseband_shift = 12500.0f;
+    float fractional_bandwidth = 0.4f;
     unsigned int power_calibration = conf.getRSSICalibration();
     if((sample_rate % channel_spacing) != 0)
     {
@@ -109,7 +110,13 @@ int main(int argc, char** argv)
     float tx_freq = float(conf.getTxFreq()) - baseband_shift;
     std::string rx_antenna = conf.getRxAntenna();
     std::string tx_antenna = conf.getTxAntenna();
-    
+    std::string deviceType = conf.getModemType();
+    std::string modemURI = conf.getModemURI();
+    bool needs_timestamp = true;
+    if (deviceType.compare("plutosdr") == 0 || deviceType.compare("pluto") == 0) {
+        needs_timestamp = false;
+    }
+
     Device* device = new Device(deviceType, modemURI, double(sample_rate), rx_freq, tx_freq,
                                 rx_gain, tx_gain, rx_antenna, tx_antenna, debug);
     if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
@@ -118,13 +125,13 @@ int main(int argc, char** argv)
     }
     Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
-    Resampler* resampler = new Resampler(25, 24, 0.5, active_channels);
+    Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
     FMMod* fm_mod = new FMMod(0.5, active_channels);
     DMRTiming* timing = new DMRTiming(sample_delay);
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels, power_calibration);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,
-                                      timing, active_channels, num_pfb_channels);
+                                      timing, active_channels, num_pfb_channels, needs_timestamp);
 
     rx->start();
     tx->start();
