@@ -61,6 +61,13 @@ m_soapyInit(false)
     rxArgs["latency"] = "0";
     txArgs["latency"] = "0";
     ::fprintf(stdout, "Using Lime SDR driver uri %s\n", uri);
+  } else if (m_soapyDeviceType.compare("usrp") == 0) {
+    const char* uri = m_soapyDeviceURI.c_str();
+    devArgs["driver"] = "uhd";
+    rxArgs["uri"]     = uri;
+    txArgs["uri"]     = uri;
+    rxArgs["recv_frame_size"] = "1024";
+    ::fprintf(stdout, "Using Ettus USRP driver uri %s\n", uri);
   } else if (m_soapyDeviceType.compare("mucell") == 0) {
     devArgs["driver"] = "mucell";
   } else {
@@ -80,11 +87,14 @@ m_soapyInit(false)
     
     m_device->setAntenna(SOAPY_SDR_RX, 0, m_rxAntenna);
     m_device->setAntenna(SOAPY_SDR_TX, 0, m_txAntenna);
-    
+
     m_device->setGain(SOAPY_SDR_RX, 0, m_soapyRXGain);
     m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
-    
-    
+
+    m_device->setBandwidth(SOAPY_SDR_RX, 0, m_sampleRate);
+    m_device->setBandwidth(SOAPY_SDR_TX, 0, m_sampleRate);
+
+
     m_rxStream = m_device->setupStream(SOAPY_SDR_RX, "CF32", {0}, rxArgs);
     m_txStream = m_device->setupStream(SOAPY_SDR_TX, "CF32", {0}, txArgs);
     m_device->activateStream(m_txStream);

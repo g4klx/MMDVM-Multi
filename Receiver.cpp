@@ -105,8 +105,8 @@ void Receiver::run()
       ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
 
     m_readBuffer.insert(m_readBuffer.end(), read_buffer, read_buffer + (unsigned int)ret);
-    m_readTime += (long long)ret * (TIME_PER_SAMPLE * (long long)m_resampler->getInterp() 
-                          / (long long)m_resampler->getDecim() * (long long)m_pfbChannels);
+    m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() 
+                          / (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
 
     if(m_readBuffer.size() < RX_INTERP_IN_SIZE * m_pfbChannels)
     {
