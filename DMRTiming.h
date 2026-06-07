@@ -37,7 +37,7 @@ public:
 class DMRTiming
 {
 public:
-    DMRTiming(int sample_delay);
+    DMRTiming(unsigned int rf_delay, int sample_delay);
     ~DMRTiming();
     void lock();
     void unlock();
@@ -50,6 +50,7 @@ private:
     std::mutex m_timingMutex;
     long long getTimeDelta(unsigned int cn=0);
     long long m_sampleDelay;
+    long long m_RFDelay;
     bool m_timingInitialized[MAX_MMDVM_CHANNELS];
     long long m_sampleCounter[MAX_MMDVM_CHANNELS];
     long long m_lastSlot[MAX_MMDVM_CHANNELS];

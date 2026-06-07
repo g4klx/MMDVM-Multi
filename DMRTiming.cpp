@@ -30,9 +30,10 @@ DMRTimeSlot::~DMRTimeSlot()
 }
 
 
-DMRTiming::DMRTiming(int sample_delay)
+DMRTiming::DMRTiming(unsigned int rf_delay, int sample_delay)
 {
-    // RF stage delay for the Lime is larger than for the USRP by approx 104 microseconds
+    m_RFDelay = (long long)rf_delay * 1000000LL;
+    // RF frontend delay for the Lime is larger than for the USRP by approx 104 microseconds
     m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE; // used to adjust SYNC sample position in MMDVM 
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
         m_sampleCounter[i] = 0;
@@ -136,7 +137,7 @@ long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &next_slot_timing_cor
     {
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
-    long long nsec = m_lastSlot[cn] + m_sampleDelay;
+    long long nsec = m_lastSlot[cn] + m_RFDelay;
     DMRTimeSlot *s = new DMRTimeSlot(slot_no, nsec, 0U);
     m_timeSlots[cn].push_back(s);
     return nsec;

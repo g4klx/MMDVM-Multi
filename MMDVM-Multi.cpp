@@ -85,7 +85,8 @@ int main(int argc, char** argv)
     bool debug = conf.getModemTrace();
     unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
     active_channels = std::max<unsigned int>(active_channels, 1U);
-    int sample_delay = conf.getDelay(); // can be negative
+    int sample_delay = conf.getSampleDelay(); // can be negative
+    unsigned int rf_delay = conf.getRFDelay();
     unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
     unsigned int digital_gain = std::max<unsigned int>(conf.getDigitalGain(), 1U);
     float dac_scaling = std::min<float>(float(digital_gain) / 100.0f, MAX_TX_DAC_SCALE);
@@ -134,7 +135,7 @@ int main(int argc, char** argv)
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
     Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
     FMMod* fm_mod = new FMMod(0.5, active_channels);
-    DMRTiming* timing = new DMRTiming(sample_delay);
+    DMRTiming* timing = new DMRTiming(rf_delay, sample_delay);
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels, power_calibration, needs_timestamp);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,

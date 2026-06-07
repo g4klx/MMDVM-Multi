@@ -33,7 +33,8 @@ public:
 	// The General section
 	bool         getDaemon() const;
 	unsigned int getNumChannels() const;
-	int 				 getDelay() const;
+	int 				 getSampleDelay() const;
+	unsigned int getRFDelay() const;
 	unsigned int getRSSICalibration() const;
 	unsigned int getSampleRate() const;
 	unsigned int getDigitalGain() const;
@@ -64,7 +65,8 @@ private:
 
 	bool         m_daemon;
 	unsigned int m_numChannels;
-	int 				 m_delay;
+	int 				 m_sampleDelay;
+	unsigned int m_RFDelay;
 	unsigned int m_RSSICalibration;
 	unsigned int m_sampleRate;
 	unsigned int m_digitalGain;

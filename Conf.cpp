@@ -37,7 +37,8 @@ CConf::CConf(const std::string& file) :
 m_file(file),
 m_daemon(false),
 m_numChannels(1U),
-m_delay(0),
+m_sampleDelay(0),
+m_RFDelay(0U),
 m_RSSICalibration(0U),
 m_sampleRate(250000),
 m_digitalGain(35),
@@ -124,7 +125,9 @@ bool CConf::read()
 			else if (::strcmp(key, "Channels") == 0)
 				m_numChannels = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "Delay") == 0)
-				m_delay = ::atoi(value);
+				m_sampleDelay = ::atoi(value);
+			else if (::strcmp(key, "RFDelay") == 0)
+				m_RFDelay = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "RSSICalibration") == 0)
 				m_RSSICalibration = (unsigned int)::atoi(value);
 		} else if (section == SECTION::LOG) {
@@ -182,9 +185,14 @@ unsigned int CConf::getNumChannels() const
 	return m_numChannels;
 }
 
-int CConf::getDelay() const
+int CConf::getSampleDelay() const
 {
-	return m_delay;
+	return m_sampleDelay;
+}
+
+unsigned int CConf::getRFDelay() const
+{
+	return m_RFDelay;
 }
 
 unsigned int CConf::getRSSICalibration() const
