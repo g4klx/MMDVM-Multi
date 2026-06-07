@@ -179,7 +179,7 @@ void Transmitter::run()
         m_dataBuf[i].insert(m_dataBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
         m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
-        if(timeNs == 0LL)
+        if(timeNs == 0LL) // FIXME: timing is wrong if first channel is not DMR or idle and transmission is cut out
           timeNs = time;
         nextSlot(i);
       }

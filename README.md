@@ -3,7 +3,7 @@ MMDVM multi-carrier modem
 
 This is the source code of the MMDVM-Multi program that can transmit multiple RF channels at once using the D-Star, DMR, System Fusion, P25, NXDN, POCSAG, and FM modes. This program is also used to transmit multiple DMR Tier 3 trunking channels on the same SDR device.
 
-It can be used with the Lime SDR, the Pluto SDR, or the SXceiver Pi hat or similar running on a Raspberry Pi. All of the development work is done on Linux with a LimeSDR-mini. It uses the SoapySDR interface drivers that can be found at https://sxceiver.com/
+It can be used with the Lime SDR, the Pluto SDR, Ettus USRP, LibreSDR and clones that advertise themselves as compatible with the USRP, or the SXceiver Pi hat or similar running on a Raspberry Pi. All of the development work is done on Linux with a LimeSDR-mini. It uses the SoapySDR interface drivers that can be found at https://sxceiver.com/
 
 For the program to run, the same number of MMDVM programs as configured in the .ini file must have been started already.
 
@@ -19,6 +19,8 @@ Channel 7    Channel 6      Channel 5     Channel 1        Channel 2     Channel
                                        RX/TX frequency
 
 ```
+
+Channel 1 must be always used for a DMR channel or otherwise be left unused.
 
 
 Requirements
