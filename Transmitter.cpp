@@ -22,11 +22,13 @@
 
 Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                          Channelizer* channelizer, DMRTiming* burst_timer,
-                         unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp) : 
+                         unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
+                         float dac_scaling) : 
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
 m_timestamping(needs_timestamp),
+m_DACScaling(dac_scaling),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
 m_timingCorrection(0LL),
@@ -260,11 +262,11 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
   {
     for (unsigned k=0; k<m_fillReal; k++)
     {
-      channels[k] = channelizer_samples[k][i] * TX_DAC_SCALING / float(m_activeChannels);
+      channels[k] = channelizer_samples[k][i] * m_DACScaling / float(m_activeChannels);
     }
     for (unsigned m=m_pfbChannels-1U, p=m_fillReal; p<m_activeChannels; m--,p++)
     {
-      channels[m] = channelizer_samples[p][i] * TX_DAC_SCALING / float(m_activeChannels);
+      channels[m] = channelizer_samples[p][i] * m_DACScaling / float(m_activeChannels);
     }
     m_channelizer->synthesize(channels, &channelized[i*m_pfbChannels]);
   }

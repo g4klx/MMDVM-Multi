@@ -87,6 +87,8 @@ int main(int argc, char** argv)
     active_channels = std::max<unsigned int>(active_channels, 1U);
     int sample_delay = conf.getDelay(); // can be negative
     unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
+    unsigned int digital_gain = std::max<unsigned int>(conf.getDigitalGain(), 1U);
+    float dac_scaling = std::min<float>(float(digital_gain) / 100.0f, MAX_TX_DAC_SCALE);
     unsigned int interpolation = 25U;
     unsigned int decimation = 24U;
     unsigned int channel_spacing = 25000U;
@@ -136,7 +138,7 @@ int main(int argc, char** argv)
     Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels, power_calibration, needs_timestamp);
     Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,
-                                      timing, active_channels, num_pfb_channels, needs_timestamp);
+                                      timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling);
 
     rx->start();
     tx->start();

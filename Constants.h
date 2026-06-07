@@ -32,12 +32,12 @@ static const long long SAMPLES_PER_SLOT = 720LL;   // at 24k
 
 static const unsigned int MAX_MMDVM_CHANNELS = 7U;
 static const unsigned int MAX_PFB_CHANNELS = 40U;  // max sample rate 1M
-static const unsigned int MAX_SAMPLE_RATE = 600000U;
+static const unsigned int MAX_SAMPLE_RATE = 1000000U;
 static const unsigned int PFB_FILTER_DELAY = 48U;  // must reduce on RPi platforms if bursts are consistently late due to CPU load
 static const unsigned int RESAMPLER_FILTER_DELAY = 24U; // ntaps = 2 * delay + 1
 static const long long TOTAL_FILTER_DELAY = ((2LL * RESAMPLER_FILTER_DELAY) + (2LL * PFB_FILTER_DELAY)) * TIME_PER_SAMPLE;
 
-static const float TX_DAC_SCALING = 0.35f;  // aim for 0 dBm divided across channels at 64 dB gain, Lime PA linear zone
+static const float MAX_TX_DAC_SCALE = 0.98f;
 
 static const unsigned int TX_INTERP_OUT_SIZE = 750U;
 static const unsigned int RX_INTERP_IN_SIZE = 75U;

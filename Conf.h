@@ -36,6 +36,7 @@ public:
 	int 				 getDelay() const;
 	unsigned int getRSSICalibration() const;
 	unsigned int getSampleRate() const;
+	unsigned int getDigitalGain() const;
 
 	// The Log section
 	unsigned int getLogDisplayLevel() const;
@@ -66,6 +67,7 @@ private:
 	int 				 m_delay;
 	unsigned int m_RSSICalibration;
 	unsigned int m_sampleRate;
+	unsigned int m_digitalGain;
 
 	unsigned int m_logDisplayLevel;
 

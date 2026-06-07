@@ -42,7 +42,8 @@ class Transmitter
 public:
     Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                 Channelizer* channelizer, DMRTiming* burst_timer,
-                unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp);
+                unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
+                float dac_scaling);
     ~Transmitter();
     void start();
     void run();
@@ -58,6 +59,7 @@ private:
     bool m_stopped;
     bool m_timingInit;
     bool m_timestamping;
+    float m_DACScaling;
     unsigned int  m_activeChannels;
     unsigned int  m_pfbChannels;
     unsigned int m_fillReal;

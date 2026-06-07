@@ -40,6 +40,7 @@ m_numChannels(1U),
 m_delay(0),
 m_RSSICalibration(0U),
 m_sampleRate(250000),
+m_digitalGain(35),
 m_logDisplayLevel(0U),
 m_modemType("sx"),
 m_modemURI(),
@@ -134,6 +135,8 @@ bool CConf::read()
 				m_modemTrace = ::atoi(value) == 1;
 			else if (::strcmp(key, "SampleRate") == 0)
 				m_sampleRate = (unsigned int)::atoi(value);
+			else if (::strcmp(key, "DigitalGain") == 0)
+				m_digitalGain = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "Type") == 0)
 				m_modemType = value;
 			else if (::strcmp(key, "URI") == 0)
@@ -193,6 +196,11 @@ unsigned int CConf::getRSSICalibration() const
 unsigned int CConf::getSampleRate() const
 {
 	return m_sampleRate;
+}
+
+unsigned int CConf::getDigitalGain() const
+{
+	return m_digitalGain;
 }
 
 unsigned int CConf::getLogDisplayLevel() const
