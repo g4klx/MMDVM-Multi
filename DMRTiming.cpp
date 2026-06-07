@@ -32,6 +32,7 @@ DMRTimeSlot::~DMRTimeSlot()
 
 DMRTiming::DMRTiming(int sample_delay)
 {
+    // RF stage delay for the Lime is larger than for the USRP by approx 104 microseconds
     m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE; // used to adjust SYNC sample position in MMDVM 
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
         m_sampleCounter[i] = 0;
