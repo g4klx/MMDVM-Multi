@@ -36,6 +36,8 @@ public:
     SoapySDR::Stream* getRxStream() { return m_rxStream;};
     SoapySDR::Device* getDevice();
     bool getSoapyInit() const;
+    unsigned int getRxMTU() const;
+    unsigned int getTxMTU() const;
     
 private:
     std::string          m_soapyDeviceType;
@@ -51,6 +53,8 @@ private:
     std::string          m_rxAntenna;
     std::string          m_txAntenna;
     bool                 m_soapyInit;
+    unsigned int         m_rxMTU;
+    unsigned int         m_txMTU;
 
 };
 

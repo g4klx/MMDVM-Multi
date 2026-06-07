@@ -100,7 +100,6 @@ void Receiver::run()
       continue;
     }
 
-    // FIXME: Pluto stream MTU
     if((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels) 
       ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
 

@@ -215,8 +215,6 @@ void Transmitter::run()
     if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
       flags |= SOAPY_SDR_HAS_TIME;
 
-
-    // FIXME: Pluto stream MTU !!
     int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, m_writeBuffer.size(), flags, timeNs);
     if (ret <= 0)
     {
