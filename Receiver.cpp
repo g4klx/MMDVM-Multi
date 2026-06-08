@@ -54,7 +54,6 @@ m_readTime(0LL)
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
   max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
   m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
-  m_readBuffer.reserve(RX_SAMP_IN_SIZE);
 }
 
 Receiver::~Receiver()
@@ -100,24 +99,21 @@ void Receiver::run()
       continue;
     }
 
-    if((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels) 
-      ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
-
-    m_readBuffer.insert(m_readBuffer.end(), read_buffer, read_buffer + (unsigned int)ret);
-    m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() 
-                          / (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
-
-    if(m_readBuffer.size() < RX_INTERP_IN_SIZE * m_pfbChannels)
+    if((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels)
     {
+      ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
       std::this_thread::sleep_for(std::chrono::milliseconds(3));
       continue;
     }
+
+    m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() 
+                          / (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
 
     if(!m_timestamping)
       timeNs = m_readTime;
 
     std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0f, 0.0f};
-    m_rotator->derotate(m_readBuffer.data(), RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
+    m_rotator->derotate(read_buffer, RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
 
     std::complex<float> channelized1[RX_INTERP_IN_SIZE][MAX_PFB_CHANNELS] = {{0.0f, 0.0f}};
     std::complex<float> channelized2[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0f, 0.0f}};
@@ -208,8 +204,6 @@ void Receiver::run()
         m_RSSI[j] = 1024U;
       }
     }
-
-    m_readBuffer.erase(m_readBuffer.begin(), m_readBuffer.begin() + RX_INTERP_IN_SIZE * m_pfbChannels);
   }
   m_stopped = true;
 }

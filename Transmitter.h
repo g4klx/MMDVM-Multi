@@ -76,7 +76,6 @@ private:
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<float> m_dataBuf[MAX_MMDVM_CHANNELS];
     uint8_t m_sn[MAX_MMDVM_CHANNELS];
-    std::vector<std::complex<float>> m_writeBuffer;
 
 };
 

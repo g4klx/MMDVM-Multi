@@ -68,7 +68,6 @@ private:
     zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<int16_t> m_dataBuf[MAX_MMDVM_CHANNELS];
-    std::vector<std::complex<float>> m_readBuffer;
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
 
 };

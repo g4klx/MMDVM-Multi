@@ -211,13 +211,12 @@ void Transmitter::run()
 
     std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
     processSamples(output_samples, channel_idle);
-    m_writeBuffer.insert(m_writeBuffer.end(), output_samples, output_samples + TX_INTERP_OUT_SIZE * m_pfbChannels);
-    void *buffs[1] = {(void*)m_writeBuffer.data()};
+    void *buffs[1] = {(void*)output_samples};
     int flags = 0;
     if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
       flags |= SOAPY_SDR_HAS_TIME;
 
-    int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, m_writeBuffer.size(), flags, timeNs);
+    int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_INTERP_OUT_SIZE * m_pfbChannels, flags, timeNs);
     if (ret <= 0)
     {
       ::fprintf(stderr,"Error writing samples to device: %s\n", SoapySDR_errToStr(ret));
@@ -226,7 +225,6 @@ void Transmitter::run()
     {
       ::fprintf(stderr,"TX overrun occured, only wrote %d samples!\n", ret);
     }
-    m_writeBuffer.erase(m_writeBuffer.begin(), m_writeBuffer.begin() + TX_INTERP_OUT_SIZE * m_pfbChannels);
   }
   m_stopped = true;
 }
