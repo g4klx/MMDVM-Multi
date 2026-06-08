@@ -126,7 +126,7 @@ int main(int argc, char** argv)
     }
 
     Device* device = new Device(deviceType, modemURI, double(sample_rate), rx_freq, tx_freq,
-                                rx_gain, tx_gain, rx_antenna, tx_antenna, debug);
+                                rx_gain, tx_gain, rx_antenna, tx_antenna, num_pfb_channels, debug);
     if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
     {
         return 1;

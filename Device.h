@@ -30,7 +30,8 @@ class Device
 public:
 
     Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
-           float rxGain, float txGain, std::string rxAntenna, std::string txAntenna, bool debug);
+           float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
+           unsigned int num_pfb_channels, bool debug);
     ~Device();
     SoapySDR::Stream* getTxStream() { return m_txStream;};
     SoapySDR::Stream* getRxStream() { return m_rxStream;};

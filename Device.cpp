@@ -21,7 +21,8 @@
 #include "Device.h"
 
 Device::Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
-               float rxGain, float txGain, std::string rxAntenna, std::string txAntenna, bool debug) :
+               float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
+               unsigned int num_pfb_channels, bool debug) :
 m_soapyDeviceType(deviceType),
 m_soapyDeviceURI(modemURI),
 m_device(nullptr),
@@ -49,8 +50,8 @@ m_soapyInit(false)
 
   if (m_soapyDeviceType.compare("plutosdr") == 0 || m_soapyDeviceType.compare("pluto") == 0) {
     const char* uri = m_soapyDeviceURI.empty() ? PLUTO_DEFAULT_URI : m_soapyDeviceURI.c_str();
-    std::string rxBufLen = std::to_string(RX_INTERP_IN_SIZE * MAX_PFB_CHANNELS);
-    std::string txBufLen = std::to_string(TX_INTERP_OUT_SIZE * MAX_PFB_CHANNELS);
+    std::string rxBufLen = std::to_string(RX_INTERP_IN_SIZE * num_pfb_channels);
+    std::string txBufLen = std::to_string(TX_INTERP_OUT_SIZE * num_pfb_channels);
     devArgs["driver"] = "plutosdr";
     rxArgs["uri"]     = uri;
     txArgs["uri"]     = uri;
