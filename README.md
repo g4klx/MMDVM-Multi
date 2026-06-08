@@ -28,14 +28,28 @@ Requirements
 
 - cmake
 - ZeroMQ
-- SoapySDR and needed device drivers: SoapyLMS7, SoapyPlutoSDR, SoapySx
+- SoapySDR and needed device drivers: SoapyLMS7, SoapyPlutoSDR, SoapyUHD, SoapySx
 - LiquidDSP
 
 Installing build dependencies on Debian Trixie: 
 
 ```
-$ sudo apt-get install cmake cppzmq-dev libzmq3-dev libzmq5 libliquid-dev libliquid1 liblimesuite-dev libsoapysdr-dev libsoapysdr0.8 soapysdr-module-lms7
+$ sudo apt-get install cmake cppzmq-dev libzmq3-dev libzmq5 libliquid-dev libliquid1 libsoapysdr-dev libsoapysdr0.8
 ```
+
+For the LimeSDR:
+
+```
+$ sudo apt-get install liblimesuite-dev  soapysdr-module-lms7 
+```
+
+For the Ettus USRP:
+
+```
+$ sudo apt-get install soapysdr-module-uhd uhd-soapysdr libuhd4.8.0 uhd-host
+```
+
+For the PlutoSDR: https://github.com/pothosware/SoapyPlutoSDR
 
 
 Building the software
@@ -63,11 +77,8 @@ $ make -j4
 
 ```
 $ git clone https://codeberg.org/qradiolink/MMDVMHost-SDR
-$ cd MMDVM-SDR/
+$ cd MMDVMHost-SDR/
 $ git checkout merge_trunking_master2
-$ mkdir -p build
-$ cd build/
-$ cmake ..
 $ make -j4
 ```
 
@@ -83,11 +94,12 @@ MMDVM-Multi
 $ ./MMDVM-Multi ../MMDVM-Multi.ini
 ```
 
+
 MMDVM
 ----
 
 
-Configure modem serial port to use virtual PTY:
+Configure modem serial port in MMDVMHost.ini to use virtual PTY:
 
 ```
 [Modem]
@@ -135,6 +147,7 @@ $ ./MMDVMHost MMDVM4.ini
 $ ./MMDVMHost MMDVM5.ini
 $ ./MMDVMHost MMDVM6.ini
 ```
+
 
 License
 ====
