@@ -23,6 +23,7 @@
 #include <csignal>
 #include <cmath>
 #include "Constants.h"
+#include "Network.h"
 #include "Device.h"
 #include "DMRTiming.h"
 #include "Receiver.h"
@@ -90,6 +91,7 @@ int main(int argc, char** argv)
     unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
     unsigned int digital_gain = std::max<unsigned int>(conf.getDigitalGain(), 1U);
     float dac_scaling = std::min<float>(float(digital_gain) / 100.0f, MAX_TX_DAC_SCALE);
+    float symbol_deviation = float(std::max<unsigned int>(conf.getSymbolDeviation(), 1U));
     unsigned int interpolation = 25U;
     unsigned int decimation = 24U;
     unsigned int channel_spacing = 25000U;
@@ -112,6 +114,18 @@ int main(int argc, char** argv)
         ::fprintf(stderr, "MMDVM-Multi: The number of channels must be lower than %d for this sample rate\n", num_pfb_channels);
         return 1;
     }
+
+    std::string modemAddress = conf.getNetworkModemAddress();
+    unsigned short modemPort = conf.getNetworkModemPort();
+    std::string localAddress = conf.getNetworkLocalAddress();
+    unsigned short localPort = conf.getNetworkLocalPort();
+    Network* network = new Network(modemAddress, modemPort, localAddress, localPort, active_channels);
+    if(!network->open())
+    {
+        ::fprintf(stderr, "MMDVM-Multi: Unable to open network connections\n");
+        return 1;
+    }
+
     float rx_gain = float(conf.getRxGain());
     float tx_gain = float(conf.getTxGain());
     float rx_freq = float(conf.getRxFreq()) - baseband_shift;
@@ -129,6 +143,7 @@ int main(int argc, char** argv)
                                 rx_gain, tx_gain, rx_antenna, tx_antenna, num_pfb_channels, debug);
     if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
     {
+        network->close();
         return 1;
     }
     Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
@@ -136,10 +151,10 @@ int main(int argc, char** argv)
     Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
     FMMod* fm_mod = new FMMod(0.5, active_channels);
     DMRTiming* timing = new DMRTiming(rf_delay, sample_delay);
-    Receiver* rx = new Receiver(device, fm_mod, resampler, rotator, channelizer,
-                                timing, active_channels, num_pfb_channels, power_calibration, needs_timestamp);
-    Transmitter* tx = new Transmitter(device, fm_mod, resampler, rotator, channelizer,
-                                      timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling);
+    Receiver* rx = new Receiver(network, device, fm_mod, resampler, rotator, channelizer,
+                                timing, active_channels, num_pfb_channels, power_calibration, symbol_deviation, needs_timestamp);
+    Transmitter* tx = new Transmitter(network, device, fm_mod, resampler, rotator, channelizer,
+                                      timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling, symbol_deviation);
 
     rx->start();
     tx->start();
@@ -163,6 +178,8 @@ int main(int argc, char** argv)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    network->close();
+
     delete tx;
     delete rx;
     delete timing;
@@ -171,6 +188,7 @@ int main(int argc, char** argv)
     delete channelizer;
     delete rotator;
     delete device;
+    delete network;
 
     return 0;
 }

@@ -20,18 +20,20 @@
 #include "Transmitter.h"
 
 
-Transmitter::Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
+Transmitter::Transmitter(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                          Channelizer* channelizer, DMRTiming* burst_timer,
                          unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
-                         float dac_scaling) : 
+                         float dac_scaling, float symbol_deviation) : 
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
 m_timestamping(needs_timestamp),
 m_DACScaling(dac_scaling),
+m_symbolDeviation(symbol_deviation),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
 m_timingCorrection(0LL),
+m_network(network),
 m_device(device),
 m_fmMod(fm_mod),
 m_resampler(resampler),
@@ -44,12 +46,6 @@ m_burstTimer(burst_timer)
   assert(m_pfbChannels <= MAX_PFB_CHANNELS);
   for(unsigned i = 0;i < m_activeChannels;i++)
   {
-    m_zmqCtx[i] = zmq::context_t(1);
-    m_zmqSocket[i] = zmq::socket_t(m_zmqCtx[i], ZMQ_REQ);
-    m_zmqSocket[i].set(zmq::sockopt::sndhwm, 10);
-    m_zmqSocket[i].set(zmq::sockopt::linger, 0);
-    int socket_no = i + 1;
-    m_zmqSocket[i].connect ("ipc:///tmp/mmdvm-tx" + std::to_string(socket_no) + ".ipc");
     m_sn[i] = 1;
   }
   unsigned int max_chan_real = m_pfbChannels / 2U - 1U;
@@ -60,12 +56,6 @@ m_burstTimer(burst_timer)
 
 Transmitter::~Transmitter()
 {
-  for(unsigned i = 0;i < m_activeChannels;i++)
-  {
-    m_zmqSocket[i].close();
-    m_zmqCtx[i].shutdown();
-    m_zmqCtx[i].close();
-  }
 }
 
 void Transmitter::start()
@@ -94,36 +84,32 @@ void Transmitter::nextSlot(unsigned int channel)
     m_sn[channel] = 2;
 }
 
-void Transmitter::getZMQMessage()
+void Transmitter::getUDPMessage()
 {
   for(unsigned j=0; j < m_activeChannels; j++)
   {
-    zmq::message_t mq_message;
-    int size = 0;
-    zmq::recv_result_t recv_result;
-    zmq::message_t request_msg (1);
-    ::memcpy (request_msg.data(), "s", sizeof(char));
-    m_zmqSocket[j].send (request_msg, zmq::send_flags::none);
-    recv_result = m_zmqSocket[j].recv(mq_message);
-    size = mq_message.size();
-    if(size < 1)
+    unsigned char req_message[1U] = {'s'};
+    unsigned char reply_message[NETWORK_TX_PACKET_SIZE];
+    m_network->write(req_message, 1U, j);
+    int ret = m_network->read(reply_message, NETWORK_TX_PACKET_SIZE, j);
+    if(ret < 1)
     {
       continue;
     }
     unsigned int buf_size = 0;
-    ::memcpy(&buf_size, (uint8_t*)mq_message.data(), sizeof(uint32_t));
+    ::memcpy(&buf_size, reply_message, sizeof(uint32_t));
     if(buf_size == SAMPLES_PER_SLOT)
     {
       uint8_t control[SAMPLES_PER_SLOT];
       int16_t data[SAMPLES_PER_SLOT];
-      ::memcpy(&control, (uint8_t*)mq_message.data() + sizeof(uint32_t), buf_size * sizeof(uint8_t));
+      ::memcpy(&control, reply_message + sizeof(uint32_t), buf_size * sizeof(uint8_t));
       
-      ::memcpy(&data, (uint8_t*)mq_message.data() + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
+      ::memcpy(&data, reply_message + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
              buf_size * sizeof(int16_t));
       for(unsigned i=0; i<buf_size; i++)
       {
         m_controlBuf[j].push_back(control[i]);
-        m_dataBuf[j].push_back(float(data[i])/32767.0f);
+        m_dataBuf[j].push_back((float(data[i]) * m_symbolDeviation)/32767.0f);
       }
     }
   }
@@ -158,7 +144,7 @@ void Transmitter::run()
       continue;
     }
 
-    getZMQMessage();
+    getUDPMessage();
 
     if(m_timingCorrection > 0)
     {

@@ -38,6 +38,7 @@ public:
 	unsigned int getRSSICalibration() const;
 	unsigned int getSampleRate() const;
 	unsigned int getDigitalGain() const;
+	unsigned int getSymbolDeviation() const;
 
 	// The Log section
 	unsigned int getLogDisplayLevel() const;
@@ -54,8 +55,8 @@ public:
 	bool         getModemTrace() const;
 
 	// The MMDVMHost section
-	std::string  getNetworkHostAddress() const;
-	unsigned short getNetworkHostPort() const;
+	std::string  getNetworkModemAddress() const;
+	unsigned short getNetworkModemPort() const;
 	std::string  getNetworkLocalAddress() const;
 	unsigned short getNetworkLocalPort() const;
 	bool         getNetworkTrace() const;
@@ -70,6 +71,7 @@ private:
 	unsigned int m_RSSICalibration;
 	unsigned int m_sampleRate;
 	unsigned int m_digitalGain;
+	unsigned int m_symbolDeviation;
 
 	unsigned int m_logDisplayLevel;
 
@@ -83,8 +85,8 @@ private:
 	std::string  m_txAntenna;
 	bool         m_modemTrace;
 
-	std::string  m_networkHostAddress;
-	unsigned short m_networkHostPort;
+	std::string  m_networkModemAddress;
+	unsigned short m_networkModemPort;
 	std::string  m_networkLocalAddress;
 	unsigned short m_networkLocalPort;
 	bool         m_networkTrace;

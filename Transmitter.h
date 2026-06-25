@@ -27,7 +27,7 @@
 #include <vector>
 #include <cstdint>
 #include <SoapySDR/Device.hpp>
-#include <zmq.hpp>
+#include "Network.h"
 #include "Device.h"
 #include "Constants.h"
 #include "DMRTiming.h"
@@ -40,10 +40,10 @@
 class Transmitter
 {
 public:
-    Transmitter(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
+    Transmitter(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                 Channelizer* channelizer, DMRTiming* burst_timer,
                 unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
-                float dac_scaling);
+                float dac_scaling, float symbol_deviation);
     ~Transmitter();
     void start();
     void run();
@@ -51,7 +51,7 @@ public:
     bool stopped() const;
 
 private:
-    void getZMQMessage();
+    void getUDPMessage();
     void nextSlot(unsigned int channel);
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
 
@@ -60,10 +60,12 @@ private:
     bool m_timingInit;
     bool m_timestamping;
     float m_DACScaling;
+    float m_symbolDeviation;
     unsigned int  m_activeChannels;
     unsigned int  m_pfbChannels;
     unsigned int m_fillReal;
     int64_t m_timingCorrection;
+    Network* m_network;
     Device* m_device;
     FMMod* m_fmMod;
     Resampler* m_resampler;
@@ -71,8 +73,6 @@ private:
     Channelizer* m_channelizer;
     DMRTiming* m_burstTimer;
     std::thread m_thread;
-    zmq::context_t m_zmqCtx[MAX_MMDVM_CHANNELS];
-    zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<float> m_dataBuf[MAX_MMDVM_CHANNELS];
     uint8_t m_sn[MAX_MMDVM_CHANNELS];

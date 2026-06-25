@@ -42,6 +42,7 @@ m_RFDelay(0U),
 m_RSSICalibration(0U),
 m_sampleRate(250000),
 m_digitalGain(35),
+m_symbolDeviation(10),
 m_logDisplayLevel(0U),
 m_modemType("sx"),
 m_modemURI(),
@@ -52,10 +53,10 @@ m_txGain(60U),
 m_rxAntenna("Auto"),
 m_txAntenna("Auto"),
 m_modemTrace(false),
-m_networkHostAddress("127.0.0.1"),
-m_networkHostPort(3335U),
+m_networkModemAddress("127.0.0.1"),
+m_networkModemPort(48100U),
 m_networkLocalAddress("127.0.0.1"),
-m_networkLocalPort(3334U),
+m_networkLocalPort(48200U),
 m_networkTrace(false)
 {
 }
@@ -140,6 +141,8 @@ bool CConf::read()
 				m_sampleRate = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "DigitalGain") == 0)
 				m_digitalGain = (unsigned int)::atoi(value);
+			else if (::strcmp(key, "SymbolDeviation") == 0)
+				m_symbolDeviation = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "Type") == 0)
 				m_modemType = value;
 			else if (::strcmp(key, "URI") == 0)
@@ -157,10 +160,10 @@ bool CConf::read()
 			else if (::strcmp(key, "TxAntenna") == 0)
 				m_txAntenna = value;
 		} else if (section == SECTION::MMDVM) {
-			if (::strcmp(key, "HostAddress") == 0)
-				m_networkHostAddress = value;
-			else if (::strcmp(key, "HostPort") == 0)
-				m_networkHostPort = (unsigned short)::atoi(value);
+			if (::strcmp(key, "ModemAddress") == 0)
+				m_networkModemAddress = value;
+			else if (::strcmp(key, "ModemPort") == 0)
+				m_networkModemPort = (unsigned short)::atoi(value);
 			else if (::strcmp(key, "LocalAddress") == 0)
 				m_networkLocalAddress = value;
 			else if (::strcmp(key, "LocalPort") == 0)
@@ -209,6 +212,11 @@ unsigned int CConf::getSampleRate() const
 unsigned int CConf::getDigitalGain() const
 {
 	return m_digitalGain;
+}
+
+unsigned int CConf::getSymbolDeviation() const
+{
+	return m_symbolDeviation;
 }
 
 unsigned int CConf::getLogDisplayLevel() const
@@ -261,14 +269,14 @@ bool CConf::getModemTrace() const
 	return m_modemTrace;
 }
 
-std::string CConf::getNetworkHostAddress() const
+std::string CConf::getNetworkModemAddress() const
 {
-	return m_networkHostAddress;
+	return m_networkModemAddress;
 }
 
-unsigned short CConf::getNetworkHostPort() const
+unsigned short CConf::getNetworkModemPort() const
 {
-	return m_networkHostPort;
+	return m_networkModemPort;
 }
 
 std::string CConf::getNetworkLocalAddress() const

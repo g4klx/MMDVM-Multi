@@ -19,12 +19,13 @@
 #include "Receiver.h"
 
 
-Receiver::Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
+Receiver::Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                    Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-                   unsigned int num_pfb_channels, float power_calibration, bool needs_timestamp) : 
+                   unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp) : 
 m_running(true),
 m_stopped(false),
 m_timestamping(needs_timestamp),
+m_network(network),
 m_device(device),
 m_fmMod(fm_mod),
 m_resampler(resampler),
@@ -34,6 +35,7 @@ m_burstTimer(burst_timer),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
 m_powerCalibration(power_calibration),
+m_symbolDeviation(symbol_deviation),
 m_readTime(0LL)
 {
   assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
@@ -41,12 +43,6 @@ m_readTime(0LL)
   assert(m_pfbChannels <= MAX_PFB_CHANNELS);
   for(unsigned i = 0;i < m_activeChannels;i++)
   {
-    m_zmqCtx[i] = zmq::context_t(1);
-    m_zmqSocket[i] = zmq::socket_t(m_zmqCtx[i], ZMQ_PUSH);
-    m_zmqSocket[i].set(zmq::sockopt::sndhwm, 100);
-    m_zmqSocket[i].set(zmq::sockopt::linger, 0);
-    int socket_no = i + 1;
-    m_zmqSocket[i].bind ("ipc:///tmp/mmdvm-rx" + std::to_string(socket_no) + ".ipc");
     m_dataBuf[i].reserve(SAMPLES_PER_SLOT);
     m_controlBuf[i].reserve(SAMPLES_PER_SLOT);
     m_RSSI[i] = 1024U;
@@ -58,12 +54,6 @@ m_readTime(0LL)
 
 Receiver::~Receiver()
 {
-  for(unsigned i = 0;i < m_activeChannels;i++)
-  {
-    m_zmqSocket[i].close();
-    m_zmqCtx[i].shutdown();
-    m_zmqCtx[i].close();
-  }
 }
 
 void Receiver::start()
@@ -172,7 +162,7 @@ void Receiver::run()
           control = MARK_SLOT1;
         if(slot_no == 2)
           control = MARK_SLOT2;
-        int32_t s = int32_t(32767.0f * output_samples[i]);
+        int32_t s = int32_t(32767.0f * output_samples[i] / m_symbolDeviation);
         s = (s > 32767) ? 32767 : s;
         s = (s < -32767) ? -32767 : s;
         int16_t sample = int16_t(s);
@@ -188,15 +178,14 @@ void Receiver::run()
       {
         unsigned int rssi = m_RSSI[j];
         uint32_t num_items = SAMPLES_PER_SLOT;
-        int buf_size = 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t) + num_items * sizeof(int16_t);
-        zmq::message_t reply (buf_size);
-        ::memcpy (reply.data (), &num_items, sizeof(uint32_t));
-        ::memcpy ((unsigned char *)reply.data () + sizeof(uint32_t), &rssi, sizeof(uint32_t));
-        ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t),
+        unsigned char reply[NETWORK_TX_PACKET_SIZE];
+        ::memcpy (reply, &num_items, sizeof(uint32_t));
+        ::memcpy (reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
+        ::memcpy (reply + 2U * sizeof(uint32_t),
                   (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
-        ::memcpy ((unsigned char *)reply.data () + 2 * sizeof(uint32_t) + num_items * sizeof(uint8_t),
+        ::memcpy (reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
                 (unsigned char *)m_dataBuf[j].data(), num_items*sizeof(int16_t));
-        m_zmqSocket[j].send (reply, zmq::send_flags::dontwait);
+        m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
         m_dataBuf[j].erase(m_dataBuf[j].begin(), m_dataBuf[j].begin() + num_items);
         m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
         m_dataBuf[j].reserve(SAMPLES_PER_SLOT);

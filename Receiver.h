@@ -25,7 +25,7 @@
 #include <string>
 #include <cstdint>
 #include <SoapySDR/Device.hpp>
-#include <zmq.hpp>
+#include "Network.h"
 #include "Device.h"
 #include "Constants.h"
 #include "DMRTiming.h"
@@ -38,9 +38,9 @@
 class Receiver
 {
 public:
-    Receiver(Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
+    Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
              Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-             unsigned int num_pfb_channels, float power_calibration, bool needs_timestamp);
+             unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp);
     ~Receiver();
     void start();
     void run();
@@ -52,6 +52,7 @@ private:
     bool m_running;
     bool m_stopped;
     bool m_timestamping;
+    Network* m_network;
     Device* m_device;
     FMMod* m_fmMod;
     Resampler* m_resampler;
@@ -62,10 +63,9 @@ private:
     unsigned int m_pfbChannels;
     unsigned int m_fillReal;
     unsigned int m_powerCalibration;
+    float m_symbolDeviation;
     long long m_readTime;
     std::thread m_thread;
-    zmq::context_t m_zmqCtx[MAX_MMDVM_CHANNELS];
-    zmq::socket_t m_zmqSocket[MAX_MMDVM_CHANNELS];
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<int16_t> m_dataBuf[MAX_MMDVM_CHANNELS];
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
