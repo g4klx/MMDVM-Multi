@@ -43,7 +43,7 @@ m_readTime(0LL)
   assert(m_pfbChannels <= MAX_PFB_CHANNELS);
   for(unsigned i = 0;i < m_activeChannels;i++)
   {
-    m_dataBuf[i].reserve(SAMPLES_PER_SLOT);
+    m_sampleBuf[i].reserve(SAMPLES_PER_SLOT);
     m_controlBuf[i].reserve(SAMPLES_PER_SLOT);
     m_RSSI[i] = 1024U;
   }
@@ -166,7 +166,7 @@ void Receiver::run()
         s = (s > 32767) ? 32767 : s;
         s = (s < -32767) ? -32767 : s;
         int16_t sample = int16_t(s);
-        m_dataBuf[j].push_back(sample);
+        m_sampleBuf[j].push_back(sample);
         m_controlBuf[j].push_back(control);
       }
     }
@@ -174,21 +174,23 @@ void Receiver::run()
 
     for(unsigned int j=0;j<m_activeChannels;j++)
     {
-      if(m_dataBuf[j].size() >= SAMPLES_PER_SLOT)
+      if(m_sampleBuf[j].size() >= SAMPLES_PER_SLOT)
       {
         unsigned int rssi = m_RSSI[j];
         uint32_t num_items = SAMPLES_PER_SLOT;
         unsigned char reply[NETWORK_TX_PACKET_SIZE];
-        ::memcpy (reply, &num_items, sizeof(uint32_t));
-        ::memcpy (reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
-        ::memcpy (reply + 2U * sizeof(uint32_t),
+        ::memcpy(reply, &num_items, sizeof(uint32_t));
+        ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
+        ::memcpy(reply + 2U * sizeof(uint32_t),
                   (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
-        ::memcpy (reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                (unsigned char *)m_dataBuf[j].data(), num_items*sizeof(int16_t));
+        ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
+                (unsigned char *)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
+        m_network->lock();
         m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
-        m_dataBuf[j].erase(m_dataBuf[j].begin(), m_dataBuf[j].begin() + num_items);
+        m_network->unlock();
+        m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);
         m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
-        m_dataBuf[j].reserve(SAMPLES_PER_SLOT);
+        m_sampleBuf[j].reserve(SAMPLES_PER_SLOT);
         m_controlBuf[j].reserve(SAMPLES_PER_SLOT);
         m_RSSI[j] = 1024U;
       }

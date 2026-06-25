@@ -106,3 +106,13 @@ void Network::close()
     m_sockets[i].close();
   }
 }
+
+void Network::lock()
+{
+  m_mutex.lock();
+}
+
+void Network::unlock()
+{
+  m_mutex.unlock();
+}

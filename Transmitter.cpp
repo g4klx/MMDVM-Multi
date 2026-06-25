@@ -90,9 +90,11 @@ void Transmitter::getUDPMessage()
   {
     unsigned char req_message[1U] = {'s'};
     unsigned char reply_message[NETWORK_TX_PACKET_SIZE];
+    m_network->lock();
     m_network->write(req_message, 1U, j);
+    m_network->unlock();
     int ret = m_network->read(reply_message, NETWORK_TX_PACKET_SIZE, j);
-    if(ret < 1)
+    if(ret < 4)
     {
       continue;
     }
@@ -109,7 +111,7 @@ void Transmitter::getUDPMessage()
       for(unsigned i=0; i<buf_size; i++)
       {
         m_controlBuf[j].push_back(control[i]);
-        m_dataBuf[j].push_back((float(data[i]) * m_symbolDeviation)/32767.0f);
+        m_sampleBuf[j].push_back((float(data[i]) * m_symbolDeviation)/32767.0f);
       }
     }
   }
@@ -161,10 +163,10 @@ void Transmitter::run()
     for(unsigned i=0;i<m_activeChannels;i++)
     {
       long long time = 0LL;
-      if(m_dataBuf[i].size() < 1)
+      if(m_sampleBuf[i].size() < 1)
       {
         channel_idle[i] = true;
-        m_dataBuf[i].insert(m_dataBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
+        m_sampleBuf[i].insert(m_sampleBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
         m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
         if(timeNs == 0LL) // FIXME: timing is wrong if first channel is not DMR or idle and transmission is cut out
@@ -220,10 +222,10 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
   std::complex<float> channelizer_samples[MAX_MMDVM_CHANNELS][TX_INTERP_OUT_SIZE] = {{0.0f, 0.0f}};
   for(unsigned i=0;i<m_activeChannels;i++)
   {
-    if(m_dataBuf[i].size() >= SAMPLES_PER_SLOT)
+    if(m_sampleBuf[i].size() >= SAMPLES_PER_SLOT)
     {
       std::complex<float> freq_modulated[SAMPLES_PER_SLOT] = {0.0f, 0.0f};
-      m_fmMod->modulate(i, m_dataBuf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
+      m_fmMod->modulate(i, m_sampleBuf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
       if(channel_idle[i])
       {
         for(unsigned j=0;j<SAMPLES_PER_SLOT;j++)
@@ -234,7 +236,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
       std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0f, 0.0f};
       m_resampler->upsample(i, freq_modulated, SAMPLES_PER_SLOT, resampled);
       ::memcpy(&channelizer_samples[i][0], resampled, TX_INTERP_OUT_SIZE * sizeof(std::complex<float>));
-      m_dataBuf[i].erase(m_dataBuf[i].begin(), m_dataBuf[i].begin() + SAMPLES_PER_SLOT);
+      m_sampleBuf[i].erase(m_sampleBuf[i].begin(), m_sampleBuf[i].begin() + SAMPLES_PER_SLOT);
       m_controlBuf[i].erase(m_controlBuf[i].begin(), m_controlBuf[i].begin() + SAMPLES_PER_SLOT);
     }
   }

@@ -74,7 +74,7 @@ private:
     DMRTiming* m_burstTimer;
     std::thread m_thread;
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
-    std::vector<float> m_dataBuf[MAX_MMDVM_CHANNELS];
+    std::vector<float> m_sampleBuf[MAX_MMDVM_CHANNELS];
     uint8_t m_sn[MAX_MMDVM_CHANNELS];
 
 };

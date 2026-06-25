@@ -67,7 +67,7 @@ private:
     long long m_readTime;
     std::thread m_thread;
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
-    std::vector<int16_t> m_dataBuf[MAX_MMDVM_CHANNELS];
+    std::vector<int16_t> m_sampleBuf[MAX_MMDVM_CHANNELS];
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
 
 };

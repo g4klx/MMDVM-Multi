@@ -20,6 +20,7 @@
 #define NETWORK_H
 
 #include <string>
+#include <mutex>
 #include <string.h>
 #include "UDPSocket.h"
 #include "Constants.h"
@@ -41,13 +42,18 @@ public:
     int write(const unsigned char* buffer, unsigned int length, unsigned int channel);
 
     void close();
-    
+
+    void lock();
+
+    void unlock();
+
 private:
     unsigned int     m_numChannels;
     CUDPSocket       m_sockets[MAX_MMDVM_CHANNELS];
     sockaddr_storage m_addr[MAX_MMDVM_CHANNELS];
     unsigned int     m_addrLen[MAX_MMDVM_CHANNELS];
     bool             m_init;
+    std::mutex       m_mutex;
 
 };
 
