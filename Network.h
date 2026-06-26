@@ -1,4 +1,5 @@
 /*
+ *   Copyright (C) 2024,2025,2026 by Jonathan Naylor G4KLX
  *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
  *
  *   This program is free software; you can redistribute it and/or modify
