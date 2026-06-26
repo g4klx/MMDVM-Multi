@@ -43,10 +43,6 @@ public:
 
     void close();
 
-    void lock();
-
-    void unlock();
-
 private:
     unsigned int     m_numChannels;
     CUDPSocket       m_sockets[MAX_MMDVM_CHANNELS];

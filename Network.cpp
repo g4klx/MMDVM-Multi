@@ -92,8 +92,10 @@ int Network::write(const unsigned char* buffer, unsigned int length, unsigned in
 {
   assert(buffer != nullptr);
   assert(length > 0U);
-
-  return m_sockets[channel].write(buffer, length, m_addr[channel], m_addrLen[channel]) ? int(length) : -1;
+  m_mutex.lock();
+  int ret = m_sockets[channel].write(buffer, length, m_addr[channel], m_addrLen[channel]) ? int(length) : -1;
+  m_mutex.unlock();
+  return ret;
 }
 
 void Network::close()
@@ -107,12 +109,3 @@ void Network::close()
   }
 }
 
-void Network::lock()
-{
-  m_mutex.lock();
-}
-
-void Network::unlock()
-{
-  m_mutex.unlock();
-}

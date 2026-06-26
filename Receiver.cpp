@@ -185,9 +185,7 @@ void Receiver::run()
                   (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
         ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
                 (unsigned char *)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
-        m_network->lock();
         m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
-        m_network->unlock();
         m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);
         m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
         m_sampleBuf[j].reserve(SAMPLES_PER_SLOT);

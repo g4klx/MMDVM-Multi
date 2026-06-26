@@ -90,9 +90,7 @@ void Transmitter::getUDPMessage()
   {
     unsigned char req_message[1U] = {'s'};
     unsigned char reply_message[NETWORK_TX_PACKET_SIZE];
-    m_network->lock();
     m_network->write(req_message, 1U, j);
-    m_network->unlock();
     int ret = m_network->read(reply_message, NETWORK_TX_PACKET_SIZE, j);
     if(ret < 4)
     {
