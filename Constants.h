@@ -16,8 +16,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef DEFINES_H
-#define DEFINES_H
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 #include <cstdint>
 
@@ -52,4 +52,4 @@ static const unsigned int NETWORK_RX_PACKET_SIZE = 4U + SAMPLES_PER_SLOT + SAMPL
 
 
 
-#endif // DEFINES_H
+#endif // CONSTANTS_H
