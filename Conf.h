@@ -54,12 +54,25 @@ public:
 	std::string  getTxAntenna() const;
 	bool         getModemTrace() const;
 
-	// The MMDVMHost section
+	// The MMDVM section
 	std::string  getNetworkModemAddress() const;
 	unsigned short getNetworkModemPort() const;
 	std::string  getNetworkLocalAddress() const;
 	unsigned short getNetworkLocalPort() const;
 	bool         getNetworkTrace() const;
+
+	// The SVXLink section
+	std::string  getBridgeModemAddress() const;
+	unsigned short getBridgeModemPort() const;
+	std::string  getBridgeLocalAddress() const;
+	unsigned short getBridgeLocalPort() const;
+	std::string  getBridgeSVXAddress() const;
+	unsigned short getBridgeSVXPort() const;
+	std::string  getBridgeLocalSVXAddress() const;
+	unsigned short getBridgeLocalSVXPort() const;
+
+	unsigned int getBridgeRxGain() const;
+	unsigned int getBridgeTxGain() const;
 
 private:
 	std::string m_file;
@@ -90,6 +103,19 @@ private:
 	std::string  m_networkLocalAddress;
 	unsigned short m_networkLocalPort;
 	bool         m_networkTrace;
+
+	std::string  m_svxBridgeModemAddress;
+	unsigned short m_svxBridgeModemPort;
+	std::string  m_svxBridgeLocalAddress;
+	unsigned short m_svxBridgeLocalPort;
+
+	std::string  m_svxBridgeSVXAddress;
+	unsigned short m_svxBridgeSVXPort;
+	std::string  m_svxBridgeLocalSVXAddress;
+	unsigned short m_svxBridgeLocalSVXPort;
+
+	unsigned int m_svxBridgeRxGain;
+	unsigned int m_svxBridgeTxGain;
 };
 
 #endif
