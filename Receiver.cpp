@@ -174,18 +174,21 @@ void Receiver::run()
 
     for(unsigned int j=0;j<m_activeChannels;j++)
     {
+      uint32_t num_items = SAMPLES_PER_SLOT;
       if(m_sampleBuf[j].size() >= SAMPLES_PER_SLOT)
       {
-        unsigned int rssi = m_RSSI[j];
-        uint32_t num_items = SAMPLES_PER_SLOT;
-        unsigned char reply[NETWORK_TX_PACKET_SIZE];
-        ::memcpy(reply, &num_items, sizeof(uint32_t));
-        ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
-        ::memcpy(reply + 2U * sizeof(uint32_t),
-                  (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
-        ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                (unsigned char *)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
-        m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
+        if(m_burstTimer->getInit(j))
+        {
+          unsigned int rssi = m_RSSI[j];
+          unsigned char reply[NETWORK_TX_PACKET_SIZE];
+          ::memcpy(reply, &num_items, sizeof(uint32_t));
+          ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
+          ::memcpy(reply + 2U * sizeof(uint32_t),
+                    (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
+          ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
+                  (unsigned char *)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
+          m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
+        }
         m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);
         m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
         m_sampleBuf[j].reserve(SAMPLES_PER_SLOT);
