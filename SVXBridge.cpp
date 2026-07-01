@@ -138,8 +138,8 @@ m_txGain(txGain)
 
 {
   m_inputBuffer.reserve(SAMPLES_PER_SLOT * 2U);
-  m_upsampler = rresamp_rrrf_create_kaiser(interp, decim, RESAMPLER_FILTER_DELAY, 0.25f, 60.0f);
-  m_downsampler = rresamp_rrrf_create_kaiser(decim, interp, RESAMPLER_FILTER_DELAY, 0.25f, 60.0f);
+  m_upsampler = rresamp_rrrf_create_kaiser(interp, decim, RESAMPLER_FILTER_DELAY, 0.16f, 60.0f);
+  m_downsampler = rresamp_rrrf_create_kaiser(decim, interp, RESAMPLER_FILTER_DELAY, 0.16f, 60.0f);
 
   bool svxInit = false;
   bool modemInit = false;
