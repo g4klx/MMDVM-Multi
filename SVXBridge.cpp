@@ -21,6 +21,7 @@
 #include <assert.h>
 
 const unsigned int BUFFER_LENGTH = 8000U;
+const unsigned int NET_TIMEOUT_FRAMES = 17U;
 const char* DEFAULT_INI_FILE = "/etc/SVXBridge.ini";
 bool running = false;
 
@@ -134,7 +135,8 @@ m_addrLenModem(0U),
 m_decim(decim),
 m_interp(interp),
 m_rxGain(rxGain),
-m_txGain(txGain)
+m_txGain(txGain),
+m_netTimeout(NET_TIMEOUT_FRAMES)
 
 {
   m_inputBuffer.reserve(SAMPLES_PER_SLOT * 2U);
@@ -198,6 +200,7 @@ void SVXBridge::processModem()
   {
     if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 2U)
     {
+      m_netTimeout = NET_TIMEOUT_FRAMES;
       float in_samples[SAMPLES_PER_SLOT * 2U];
       ::memset(in_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(float));
       for(unsigned int i=0;i < SAMPLES_PER_SLOT * 2U;i++)
@@ -226,6 +229,14 @@ void SVXBridge::processModem()
       ::memcpy(reply + sizeof(uint32_t) + num_items * sizeof(uint8_t),
                 (unsigned char *)modem_samples, num_items*sizeof(int16_t));
       writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
+    }
+    else if((m_netTimeout < NET_TIMEOUT_FRAMES) && (m_netTimeout > 0U))
+    {
+      unsigned char reply[NETWORK_RX_PACKET_SIZE];
+      ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
+      ::memcpy(reply, &num_items, sizeof(uint32_t));
+      writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
+      m_netTimeout--;
     }
 
     uint32_t data_size = 0;

@@ -70,6 +70,7 @@ private:
   unsigned int m_interp;
   unsigned int m_rxGain;
   unsigned int m_txGain;
+  unsigned int m_netTimeout;
   rresamp_rrrf m_upsampler;
   rresamp_rrrf m_downsampler;
   std::vector<int16_t> m_inputBuffer;
