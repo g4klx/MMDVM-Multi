@@ -22,6 +22,9 @@ Channel 7    Channel 6      Channel 5     Channel 1        Channel 2     Channel
 
 Channel 1 must be always used for a DMR channel or otherwise be left unused.
 
+The SVXBridge program can be used to bridge SVXLink and MMDVM-Multi directly. SVXLink must be configured with a card sample rate of 48000 and the [Rx1] and [Tx1] must use UDP as audio device.
+
+
 
 Requirements
 ====
@@ -89,6 +92,60 @@ MMDVM-Multi
 
 ```
 $ ./MMDVM-Multi ../MMDVM-Multi.ini
+```
+
+
+SVXBridge
+----
+
+Adjust RxGain between 500 and 2000 and TxGain between 1 and 20 in SVXBridge.ini for normal audio levels; these values also depend on the SymbolDeviation setting in MMDVM-Multi
+Select which channel of MMDVM-Multi is used by setting ModemPort to the corresponding value
+Adjust SVX ports as needed
+
+
+```
+$ ./SVXBridge ../SVXBridge.ini
+```
+
+SVXLink config values for [Rx1] and [Tx1]:
+
+```
+[Rx1]
+TYPE=Local
+RX_ID=
+AUDIO_DEV=udp:127.0.0.1:4937
+AUDIO_CHANNEL=0
+AUDIO_DEV_KEEP_OPEN=0
+SQL_DET=CTCSS
+SQL_START_DELAY=20
+SQL_DELAY=500
+SQL_HANGTIME=20
+SQL_TIMEOUT=600
+VOX_FILTER_DEPTH=10
+VOX_THRESH=10000
+CTCSS_MODE=2
+CTCSS_FQ=103.5
+SIGLEV_DET=NOISE
+SIGLEV_SLOPE=1
+SIGLEV_OFFSET=0
+SIGLEV_OPEN_THRESH=30
+SIGLEV_CLOSE_THRESH=10
+DEEMPHASIS=1
+
+```
+
+```
+[Tx1]
+TYPE=Local
+AUDIO_DEV=udp:127.0.0.1:4938
+AUDIO_CHANNEL=0
+AUDIO_DEV_KEEP_OPEN=0
+PTT_TYPE=NONE
+TIMEOUT=1800
+TX_DELAY=0
+CTCSS_FQ=103.5
+CTCSS_LEVEL=9
+PREEMPHASIS=1
 ```
 
 
