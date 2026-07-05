@@ -202,6 +202,7 @@ void Transmitter::run()
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
+        nextSlot(i);
       }
     }
     m_burstTimer->unlock();
