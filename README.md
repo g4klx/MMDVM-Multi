@@ -7,7 +7,9 @@ It can be used with the Lime SDR, the Pluto SDR, Ettus USRP, LibreSDR and clones
 
 For the program to run, the same number of MMDVM-IQ programs as configured in the .ini file must have been started already.
 
-It connects to the MMDVM-IQ modems via UDP ports sequentially numbered from the base port. The channel numbering for 7 channels is:
+It connects to the MMDVM-IQ modems via UDP ports sequentially numbered starting from the base port.
+The number of RF channels can be between 1 and 7. Any channel can be allocated to any mode.
+The channel numbering in reference to the transmit/receive frequency for 7 channels is:
 
 ```
 Channel 7    Channel 6      Channel 5     Channel 1        Channel 2     Channel 3     Channel 4
@@ -20,7 +22,6 @@ Channel 7    Channel 6      Channel 5     Channel 1        Channel 2     Channel
 
 ```
 
-Channel 1 must be always used for a DMR channel or otherwise be left unused.
 
 The SVXBridge program can be used to bridge SVXLink and MMDVM-Multi directly. SVXLink must be configured with a card sample rate of 48000 and the [Rx1] and [Tx1] must use UDP as audio device.
 

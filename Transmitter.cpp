@@ -151,23 +151,28 @@ void Transmitter::run()
       m_timingCorrection = 0;
     }
 
-    bool channel_idle[MAX_MMDVM_CHANNELS];
+    bool channelIdle[MAX_MMDVM_CHANNELS];
+    bool chanTiming[MAX_MMDVM_CHANNELS];
     for(unsigned i=0;i<MAX_MMDVM_CHANNELS;i++)
-      channel_idle[i] = false;
+    {
+      channelIdle[i] = false;
+      chanTiming[i] = false;
+    }
 
-    m_burstTimer->lock(); // need to wait for all RX channels to have up-to-date time reference
+    m_burstTimer->lock();
     for(unsigned i=0;i<m_activeChannels;i++)
     {
       long long time = 0LL;
       if(m_sampleBuf[i].size() < 1)
       {
-        channel_idle[i] = true;
+        channelIdle[i] = true;
         m_sampleBuf[i].insert(m_sampleBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
         m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
-        if(timeNs == 0LL) // FIXME: timing is wrong if first channel is not DMR or idle and transmission is cut out
+        if(timeNs == 0LL)
           timeNs = time;
         nextSlot(i);
+        chanTiming[i] = true;
       }
       else
       {
@@ -176,6 +181,7 @@ void Transmitter::run()
           uint8_t control = m_controlBuf[i].at(j);
           if(control == MARK_SLOT1)
           {
+            chanTiming[i] = true;
             m_sn[i] = 1;
             time = m_burstTimer->allocateSlot(1U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
             if(timeNs == 0LL)
@@ -183,6 +189,7 @@ void Transmitter::run()
           }
           if(control == MARK_SLOT2)
           {
+            chanTiming[i] = true;
             m_sn[i] = 2;
             time = m_burstTimer->allocateSlot(2U, m_timingCorrection, i) - (j * TIME_PER_SAMPLE);
             if(timeNs == 0LL)
@@ -190,11 +197,17 @@ void Transmitter::run()
           }
         }
       }
+      if(!chanTiming[i])
+      {
+        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
+        if(timeNs == 0LL)
+          timeNs = time;
+      }
     }
     m_burstTimer->unlock();
 
     std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
-    processSamples(output_samples, channel_idle);
+    processSamples(output_samples, channelIdle);
     void *buffs[1] = {(void*)output_samples};
     int flags = 0;
     if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
