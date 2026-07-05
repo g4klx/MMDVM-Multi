@@ -42,21 +42,21 @@ public:
             const std::string& localSVXAddress, unsigned int localSVXPort,
             unsigned int interp, unsigned int decim, unsigned int rxGain, unsigned int txGain);
 
-    ~SVXBridge();
-    
-    void runBridge();
-    void processSVXLink();
-    void processModem();
-    
-    bool open();
-    int readSVX(unsigned char* buffer, unsigned int length);
-    int writeSVX(const unsigned char* buffer, unsigned int length);
-    int readModem(unsigned char* buffer, unsigned int length);
-    int writeModem(const unsigned char* buffer, unsigned int length);
-    void close();
-    
-    void upsample(float* in_samples, unsigned int num_samples, float* out_samples);
-    void downsample(float* in_samples, unsigned int num_samples, float* out_samples);
+  ~SVXBridge();
+
+  void runBridge();
+  void processSVXLink();
+  void processModem();
+
+  bool open();
+  int readSVX(unsigned char* buffer, unsigned int length);
+  int writeSVX(const unsigned char* buffer, unsigned int length);
+  int readModem(unsigned char* buffer, unsigned int length);
+  int writeModem(const unsigned char* buffer, unsigned int length);
+  void close();
+
+  void upsample(float* in_samples, unsigned int num_samples, float* out_samples);
+  void downsample(float* in_samples, unsigned int num_samples, float* out_samples);
     
 private:
   bool m_init;

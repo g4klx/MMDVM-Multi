@@ -21,7 +21,7 @@
 #include <assert.h>
 
 const unsigned int BUFFER_LENGTH = 8000U;
-const unsigned int NET_TIMEOUT_FRAMES = 17U;
+const unsigned int NET_TIMEOUT_FRAMES = 25U;
 const char* DEFAULT_INI_FILE = "/etc/SVXBridge.ini";
 bool running = false;
 
@@ -230,7 +230,7 @@ void SVXBridge::processModem()
                 (unsigned char *)modem_samples, num_items*sizeof(int16_t));
       writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
     }
-    else if((m_netTimeout < NET_TIMEOUT_FRAMES) && (m_netTimeout > 0U))
+    else if(m_netTimeout > 0U)
     {
       unsigned char reply[NETWORK_RX_PACKET_SIZE];
       ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
