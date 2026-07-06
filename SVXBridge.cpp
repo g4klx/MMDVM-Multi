@@ -116,7 +116,7 @@ int main(int argc, char** argv)
   while(running)
   {
     bridge->runBridge();
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
 
   bridge->close();
@@ -183,7 +183,7 @@ void SVXBridge::processSVXLink()
     {
       m_inputBuffer.push_back(svxSamples[i]);
     }
-    if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 8U)
+    if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 4U)
     {
       m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
     }

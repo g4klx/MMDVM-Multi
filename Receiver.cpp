@@ -96,10 +96,7 @@ void Receiver::run()
       continue;
     }
 
-    m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() 
-                          / (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
-
-    if(!m_timestamping)
+    if(!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
       timeNs = m_readTime;
 
     std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0f, 0.0f};
@@ -122,7 +119,7 @@ void Receiver::run()
     }
 
 //    First four usable channels are on the real side of the FFT, the rest in imag,
-//    reversed order to minimize occupied BW
+//    reversed order to minimize occupied BW for 250k sps
 //    Channel 5 of the PFB (how many total??) wraps around to the imag side and is not usable
 //
 //    Channel 7    Channel 6     Channel 5     Channel 1       Channel 2     Channel 3     Channel 4
@@ -172,6 +169,11 @@ void Receiver::run()
     }
     m_burstTimer->unlock();
 
+    // simulate a timestamp
+    if(!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
+      m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() /
+                    (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
+
     for(unsigned int j=0;j<m_activeChannels;j++)
     {
       uint32_t num_items = SAMPLES_PER_SLOT;
@@ -184,9 +186,9 @@ void Receiver::run()
           ::memcpy(reply, &num_items, sizeof(uint32_t));
           ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
           ::memcpy(reply + 2U * sizeof(uint32_t),
-                    (unsigned char *)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
+                    (unsigned char*)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
           ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                  (unsigned char *)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
+                  (unsigned char*)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
           m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
         }
         m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);

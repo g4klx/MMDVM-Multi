@@ -211,7 +211,7 @@ void Transmitter::run()
     processSamples(output_samples, channelIdle);
     void *buffs[1] = {(void*)output_samples};
     int flags = 0;
-    if(m_timestamping && (timeNs > 0LL))  // only needed if there is at least one DMR channel or one idle channel with time info
+    if(m_timestamping && (timeNs > 0LL))
       flags |= SOAPY_SDR_HAS_TIME;
 
     int ret = m_device->getDevice()->writeStream(m_device->getTxStream(), buffs, TX_INTERP_OUT_SIZE * m_pfbChannels, flags, timeNs);
