@@ -183,7 +183,7 @@ void SVXBridge::processSVXLink()
     {
       m_inputBuffer.push_back(svxSamples[i]);
     }
-    if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 4U)
+    if(m_inputBuffer.size() > SAMPLES_PER_SLOT * 8U)
     {
       m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
     }
