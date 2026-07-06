@@ -78,7 +78,6 @@ int Network::read(unsigned char* buffer, unsigned int length, unsigned int chann
   if (ret < 0)
     return ret;
 
-  // Add new data to the ring buffer
   if (ret > 0) {
     length = (unsigned int) ret;
     if (CUDPSocket::match(addr, m_addr[channel])) {
@@ -93,9 +92,7 @@ int Network::write(const unsigned char* buffer, unsigned int length, unsigned in
 {
   assert(buffer != nullptr);
   assert(length > 0U);
-  m_mutex.lock();
   int ret = m_sockets[channel].write(buffer, length, m_addr[channel], m_addrLen[channel]) ? int(length) : -1;
-  m_mutex.unlock();
   return ret;
 }
 

@@ -50,7 +50,6 @@ private:
     sockaddr_storage m_addr[MAX_MMDVM_CHANNELS];
     unsigned int     m_addrLen[MAX_MMDVM_CHANNELS];
     bool             m_init;
-    std::mutex       m_mutex;
 
 };
 
