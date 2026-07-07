@@ -207,7 +207,7 @@ int main(int argc, char** argv)
     Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
     Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
-    FMMod* fm_mod = new FMMod(0.5, active_channels);
+    FMMod* fm_mod = new FMMod(FSK4_DEVIATION, active_channels);
     DMRTiming* timing = new DMRTiming(rf_delay, sample_delay);
     Receiver* rx = new Receiver(network, device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels, power_calibration, symbol_deviation, needs_timestamp);

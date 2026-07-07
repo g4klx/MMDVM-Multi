@@ -39,6 +39,7 @@ static const unsigned int RESAMPLER_FILTER_DELAY = 24U; // ntaps = 2 * delay + 1
 static const long long TOTAL_FILTER_DELAY = ((2LL * RESAMPLER_FILTER_DELAY) + (2LL * PFB_FILTER_DELAY)) * TIME_PER_SAMPLE;
 
 static const float MAX_TX_DAC_SCALE = 0.98f;
+static const float FSK4_DEVIATION = 0.520833333333f; // for 24k, gives 1944 Hz for DMR symbol deviation
 
 static const unsigned int TX_INTERP_OUT_SIZE = 750U;
 static const unsigned int RX_INTERP_IN_SIZE = 75U;
