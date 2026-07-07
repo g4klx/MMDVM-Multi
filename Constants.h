@@ -29,6 +29,7 @@ static const uint8_t NUMBER_OF_SLOTS = 2U;
 static const long long SLOT_TIME = 30000000LL;     // nanosec
 static const long long TIME_PER_SAMPLE = 41667LL;  // nanosec
 static const long long SAMPLES_PER_SLOT = 720LL;   // at 24k
+static const long long MMDVM_MARK_POSITION = 710LL;   // start of CACH
 
 static const unsigned int MAX_MMDVM_CHANNELS = 7U;
 static const unsigned int MAX_PFB_CHANNELS = 40U;  // max sample rate 1M

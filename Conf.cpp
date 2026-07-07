@@ -138,7 +138,7 @@ bool CConf::read()
 				m_daemon = ::atoi(value) == 1;
 			else if (::strcmp(key, "Channels") == 0)
 				m_numChannels = (unsigned int)::atoi(value);
-			else if (::strcmp(key, "Delay") == 0)
+			else if (::strcmp(key, "DMRDelay") == 0)
 				m_sampleDelay = ::atoi(value);
 			else if (::strcmp(key, "RFDelay") == 0)
 				m_RFDelay = (unsigned int)::atoi(value);

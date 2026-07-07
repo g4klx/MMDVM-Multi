@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2023-2026 by Adrian Musceac YO8RZZ
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -49,9 +49,8 @@ m_burstTimer(burst_timer)
     m_sn[i] = 1;
   }
   unsigned int max_chan_real = m_pfbChannels / 2U - 1U;
-  max_chan_real = std::min<unsigned int>(max_chan_real, 4U);
+  max_chan_real = std::min<unsigned int>(max_chan_real, 4U); // FIXME: flexible number of channels
   m_fillReal = std::min<unsigned int>(max_chan_real, m_activeChannels);
-  
 }
 
 Transmitter::~Transmitter()
@@ -77,7 +76,6 @@ bool Transmitter::stopped() const
 
 void Transmitter::nextSlot(unsigned int channel)
 {
-  // idle channel will keep DMR timing so other modes can run at the same time
   if(m_sn[channel] == 2)
     m_sn[channel] = 1;
   else
@@ -146,7 +144,6 @@ void Transmitter::run()
 
     if(m_timingCorrection > 0)
     {
-      // don't attempt to get next batch of samples too fast, DMRTX generates them on demand
       std::this_thread::sleep_for(std::chrono::nanoseconds(m_timingCorrection));
       m_timingCorrection = 0;
     }
@@ -168,7 +165,7 @@ void Transmitter::run()
         channelIdle[i] = true;
         m_sampleBuf[i].insert(m_sampleBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
         m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
-        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
+        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (MMDVM_MARK_POSITION * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
         nextSlot(i);
@@ -199,7 +196,7 @@ void Transmitter::run()
       }
       if(!chanTiming[i])
       {
-        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (710LL * TIME_PER_SAMPLE);
+        time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (MMDVM_MARK_POSITION * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
         nextSlot(i);

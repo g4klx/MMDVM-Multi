@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2023-2026 by Adrian Musceac YO8RZZ
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -36,11 +36,11 @@ DMRTiming::DMRTiming(unsigned int rf_delay, int sample_delay)
     // RF frontend delay for the Lime is larger than for the USRP by approx 104 microseconds
     m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE; // used to adjust SYNC sample position in MMDVM 
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
-        m_sampleCounter[i] = 0;
+        m_sampleCounter[i] = 0LL;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
-        m_lastSlot[i] = 0;
+        m_lastSlot[i] = 0LL;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
-        m_timeBase[i] = 0;
+        m_timeBase[i] = 0LL;
     for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
         m_timingInitialized[i] = false;
 }
@@ -75,7 +75,7 @@ long long DMRTiming::getTimeDelta(unsigned int cn)
 void DMRTiming::setTimer(long long value, unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
-    m_sampleCounter[cn] = 0;
+    m_sampleCounter[cn] = 0LL;
     m_timeBase[cn] = value;
     if(m_timeBase[cn] > 4LL * SLOT_TIME)
         m_timingInitialized[cn] = true;
@@ -92,7 +92,7 @@ uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
     assert(cn < MAX_MMDVM_CHANNELS);
     if(!time_base_received) // not the first sample in the batch
         m_sampleCounter[cn]++;
-    if(m_timeSlots[cn].size() < 1) // probably not a DMR or idle channel
+    if(m_timeSlots[cn].size() < 1U)
         return 0;
 
     long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - TOTAL_FILTER_DELAY - m_sampleDelay;
@@ -104,7 +104,7 @@ uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
     }
     else if(sample_time >= s->slotTime)
     {
-        if(s->slotSampleCounter >= (SAMPLES_PER_SLOT - 1))
+        if(s->slotSampleCounter >= (SAMPLES_PER_SLOT - 1U))
         {
             delete m_timeSlots[cn][0];
             m_timeSlots[cn].erase(m_timeSlots[cn].begin());
@@ -121,11 +121,11 @@ long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &next_slot_timing_cor
     long long elapsed = getTimeDelta(cn);
     if(elapsed <= m_lastSlot[cn])
     {
-        if(cn == 0)
+        if(cn == 0U)
             next_slot_timing_correction = m_lastSlot[cn] - elapsed;
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
-    else if(m_lastSlot[cn] == 0)
+    else if(m_lastSlot[cn] == 0LL)
     {
         m_lastSlot[cn] = elapsed;
     }

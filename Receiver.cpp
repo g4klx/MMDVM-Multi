@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2023-2026 by Adrian Musceac YO8RZZ
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -48,7 +48,7 @@ m_readTime(0LL)
     m_RSSI[i] = 1024U;
   }
   unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
-  max_real_chan = std::min<unsigned int>(max_real_chan, 4U);
+  max_real_chan = std::min<unsigned int>(max_real_chan, 4U); // FIXME: flexible number of channels
   m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
 }
 
