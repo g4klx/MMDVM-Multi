@@ -54,10 +54,12 @@ private:
     void getUDPMessage();
     void nextSlot(unsigned int channel);
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
+    void setTx(bool* channelIdle);
 
     bool m_running;
     bool m_stopped;
     bool m_timingInit;
+    bool m_tx;
     bool m_timestamping;
     float m_DACScaling;
     float m_symbolDeviation;

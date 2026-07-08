@@ -93,6 +93,7 @@ m_soapyInit(false)
     m_device->setAntenna(SOAPY_SDR_RX, 0, m_rxAntenna);
     m_device->setAntenna(SOAPY_SDR_TX, 0, m_txAntenna);
 
+    // Device TX calibration routine requires normal gains for RF loopback
     m_device->setGain(SOAPY_SDR_RX, 0, m_soapyRXGain);
     m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
 
@@ -111,14 +112,21 @@ m_soapyInit(false)
     m_rxMTU = m_device->getStreamMTU(m_rxStream);
     m_txMTU = m_device->getStreamMTU(m_txStream);
 
+    SoapySDR::Range txGainRange = m_device->getGainRange(SOAPY_SDR_TX, 0);
+    SoapySDR::Range rxGainRange = m_device->getGainRange(SOAPY_SDR_RX, 0);
+    m_minTxGain = (float)txGainRange.minimum() + (float)txGainRange.step();
+
     ::fprintf(stdout, "Soapy device initialized\n");
-    ::fprintf(stdout, "RX stream MTU is %d\n", m_rxMTU);
-    ::fprintf(stdout, "TX stream MTU is %d\n", m_txMTU);
+    ::fprintf(stdout, "  RX stream MTU is %d\n", m_rxMTU);
+    ::fprintf(stdout, "  TX stream MTU is %d\n", m_txMTU);
+    ::fprintf(stdout, "  Minimum TX gain: %f dB\n", txGainRange.minimum());
+    ::fprintf(stdout, "  Maximum TX gain: %f dB\n", txGainRange.maximum());
+    ::fprintf(stdout, "  Minimum RX gain: %f dB\n", rxGainRange.minimum());
+    ::fprintf(stdout, "  Maximum RX gain: %f dB\n", rxGainRange.maximum());
     m_soapyInit = true;
   } catch (std::runtime_error &e) {
     ::fprintf(stderr, "Soapy device failed to initialize\n");
   }
-  
 }
 
 Device::~Device()
@@ -162,3 +170,15 @@ unsigned int Device::getTxMTU() const
 {
   return m_txMTU;
 }
+
+void Device::setTx(bool tx)
+{
+  // TODO: SX handling
+  if(tx)
+    m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
+  else
+    m_device->setGain(SOAPY_SDR_TX, 0, m_minTxGain);
+
+  // poke GPIO/relay code here
+}
+

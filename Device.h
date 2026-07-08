@@ -39,6 +39,7 @@ public:
     bool getSoapyInit() const;
     unsigned int getRxMTU() const;
     unsigned int getTxMTU() const;
+    void setTx(bool tx);
     
 private:
     std::string          m_soapyDeviceType;
@@ -56,6 +57,7 @@ private:
     bool                 m_soapyInit;
     unsigned int         m_rxMTU;
     unsigned int         m_txMTU;
+    float                m_minTxGain;
 
 };
 

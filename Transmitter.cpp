@@ -27,6 +27,7 @@ Transmitter::Transmitter(Network* network, Device* device, FMMod* fm_mod, Resamp
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
+m_tx(false),
 m_timestamping(needs_timestamp),
 m_DACScaling(dac_scaling),
 m_symbolDeviation(symbol_deviation),
@@ -131,7 +132,11 @@ void Transmitter::run()
       }
       m_burstTimer->unlock();
       if(has_time)
+      {
         m_timingInit = true;
+        // to avoid race condition with LMS7002M calibration routine, wait 120 msec after init to set gain to minimum
+        m_device->setTx(false);
+      }
     }
 
     if(!m_timingInit)
@@ -204,6 +209,8 @@ void Transmitter::run()
     }
     m_burstTimer->unlock();
 
+    setTx(channelIdle);
+
     std::complex<float> output_samples[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
     processSamples(output_samples, channelIdle);
     void *buffs[1] = {(void*)output_samples};
@@ -264,5 +271,30 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
     m_channelizer->synthesize(channels, &channelized[i*m_pfbChannels]);
   }
   m_rotator->rotate(channelized, TX_INTERP_OUT_SIZE * m_pfbChannels, output_samples);
+}
+
+void Transmitter::setTx(bool* channelIdle)
+{
+  bool active = false;
+  for(unsigned int i=0;i < MAX_MMDVM_CHANNELS;i++)
+  {
+    if(!channelIdle[i])
+    {
+      active = true;
+      break;
+    }
+  }
+  if(!m_tx && active)
+  {
+    m_tx = true;
+    m_device->setTx(true);
+    ::fprintf(stdout,"TX on\n");
+  }
+  else if(m_tx && !active)
+  {
+    m_tx = false;
+    m_device->setTx(false);
+    ::fprintf(stdout,"TX off\n");
+  }
 }
 
