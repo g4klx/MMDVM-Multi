@@ -276,7 +276,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
 void Transmitter::setTx(bool* channelIdle)
 {
   bool active = false;
-  for(unsigned int i=0;i < MAX_MMDVM_CHANNELS;i++)
+  for(unsigned int i=0;i < m_activeChannels;i++)
   {
     if(!channelIdle[i])
     {
