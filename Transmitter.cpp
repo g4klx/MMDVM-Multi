@@ -83,27 +83,27 @@ void Transmitter::nextSlot(unsigned int channel)
     m_sn[channel] = 2;
 }
 
-void Transmitter::getUDPMessage()
+void Transmitter::readNetwork()
 {
   for(unsigned j=0; j < m_activeChannels; j++)
   {
-    unsigned char reply_message[NETWORK_TX_PACKET_SIZE];
-    int ret = m_network->read(reply_message, NETWORK_TX_PACKET_SIZE, j);
-    if(ret < 4)
-    {
+    unsigned char reply_message[NETWORK_RX_PACKET_SIZE];
+    int ret = m_network->read(reply_message, NETWORK_RX_PACKET_SIZE, j);
+    if((unsigned int)ret != NETWORK_RX_PACKET_SIZE)
       continue;
-    }
-    unsigned int buf_size = 0;
-    ::memcpy(&buf_size, reply_message, sizeof(uint32_t));
-    if(buf_size == SAMPLES_PER_SLOT)
+
+    // the code used to work with variable packet sizes, but it's no longer needed
+    uint32_t num_items = 0;
+    ::memcpy(&num_items, reply_message, sizeof(uint32_t));
+    if(num_items == SAMPLES_PER_SLOT)
     {
       uint8_t control[SAMPLES_PER_SLOT];
       int16_t data[SAMPLES_PER_SLOT];
-      ::memcpy(&control, reply_message + sizeof(uint32_t), buf_size * sizeof(uint8_t));
+      ::memcpy(&control, reply_message + sizeof(uint32_t), num_items * sizeof(uint8_t));
       
-      ::memcpy(&data, reply_message + sizeof(uint32_t) + buf_size * sizeof(uint8_t),
-             buf_size * sizeof(int16_t));
-      for(unsigned i=0; i<buf_size; i++)
+      ::memcpy(&data, reply_message + sizeof(uint32_t) + num_items * sizeof(uint8_t),
+             num_items * sizeof(int16_t));
+      for(unsigned i=0; i<num_items; i++)
       {
         m_controlBuf[j].push_back(control[i]);
         m_sampleBuf[j].push_back((float(data[i]) * m_symbolDeviation)/32767.0f);
@@ -145,7 +145,7 @@ void Transmitter::run()
       continue;
     }
 
-    getUDPMessage();
+    readNetwork();
 
     if(m_timingCorrection > 0)
     {
@@ -168,13 +168,13 @@ void Transmitter::run()
       if(m_sampleBuf[i].size() < 1)
       {
         channelIdle[i] = true;
-        m_sampleBuf[i].insert(m_sampleBuf[i].begin(), SAMPLES_PER_SLOT, 1.0e-9f);
+        m_sampleBuf[i].insert(m_sampleBuf[i].begin(), SAMPLES_PER_SLOT, 0.0f);
         m_controlBuf[i].insert(m_controlBuf[i].begin(), SAMPLES_PER_SLOT, MARK_NONE);
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (MMDVM_MARK_POSITION * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
-        nextSlot(i);
         chanTiming[i] = true;
+        nextSlot(i);
       }
       else
       {
@@ -204,6 +204,7 @@ void Transmitter::run()
         time = m_burstTimer->allocateSlot(m_sn[i], m_timingCorrection, i) - (MMDVM_MARK_POSITION * TIME_PER_SAMPLE);
         if(timeNs == 0LL)
           timeNs = time;
+        chanTiming[i] = true;
         nextSlot(i);
       }
     }
@@ -244,7 +245,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
       {
         for(unsigned j=0;j<SAMPLES_PER_SLOT;j++)
         {
-          freq_modulated[j] = {1.0e-9f, 1.0e-9f}; // zero it but keep next phase step in freqmod
+          freq_modulated[j] = {0.0f, 0.0f}; // zero it but keep next phase step in freqmod
         }
       }
       std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0f, 0.0f};
@@ -256,7 +257,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
   }
   
   std::complex<float> channelized[TX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
-  std::complex<float> channels[MAX_PFB_CHANNELS] = {1.0e-9f, 1.0e-9f};;
+  std::complex<float> channels[MAX_PFB_CHANNELS] = {0.0f, 0.0f};
 
   for(unsigned i=0; i<TX_INTERP_OUT_SIZE; i++)
   {

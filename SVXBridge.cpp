@@ -71,6 +71,60 @@ int main(int argc, char** argv)
     return 1;
   }
   
+  bool m_daemon = conf.getDaemon();
+  if (m_daemon) {
+    // Create new process
+    pid_t pid = ::fork();
+    if (pid == -1) {
+      ::fprintf(stderr, "Couldn't fork() , exiting\n");
+      return -1;
+    }
+    else if (pid != 0) {
+      exit(EXIT_SUCCESS);
+    }
+    
+    // Create new session and process group
+    if (::setsid() == -1) {
+      ::fprintf(stderr, "Couldn't setsid(), exiting\n");
+      return -1;
+    }
+    
+    // Set the working directory to the root directory
+    if (::chdir("/") == -1) {
+      ::fprintf(stderr, "Couldn't cd /, exiting\n");
+      return -1;
+    }
+    
+    // If we are currently root...
+    if (getuid() == 0) {
+      struct passwd* user = ::getpwnam("mmdvm");
+      if (user == nullptr) {
+        ::fprintf(stderr, "Could not get the mmdvm user, exiting\n");
+        return -1;
+      }
+      
+      uid_t mmdvm_uid = user->pw_uid;
+      gid_t mmdvm_gid = user->pw_gid;
+      
+      // Set user and group ID's to mmdvm:mmdvm
+      if (::setgid(mmdvm_gid) != 0) {
+        ::fprintf(stderr, "Could not set mmdvm GID, exiting\n");
+        return -1;
+      }
+      
+      if (::setuid(mmdvm_uid) != 0) {
+        ::fprintf(stderr, "Could not set mmdvm UID, exiting\n");
+        return -1;
+      }
+      
+      // Double check it worked (AKA Paranoia)
+      if (::setuid(0) != -1) {
+        ::fprintf(stderr, "It's possible to regain root - something is wrong!, exiting\n");
+        return -1;
+      }
+    }
+  }
+  
   std::string modemAddress = conf.getBridgeModemAddress();
   unsigned int modemPort = conf.getBridgeModemPort();
   std::string localModemAddress = conf.getBridgeLocalAddress();
@@ -111,7 +165,8 @@ int main(int argc, char** argv)
   std::signal(SIGTERM, signal_handler);
   std::signal(SIGHUP, signal_handler);
   std::signal(SIGUSR1, signal_handler);
-  
+
+  ::fprintf(stdout, "SVXBridge started\n");
   running = true;
   while(running)
   {
@@ -137,7 +192,6 @@ m_interp(interp),
 m_rxGain(rxGain),
 m_txGain(txGain),
 m_netTimeout(NET_TIMEOUT_FRAMES)
-
 {
   m_inputBuffer.reserve(SAMPLES_PER_SLOT * 2U);
   m_upsampler = rresamp_rrrf_create_kaiser(interp, decim, RESAMPLER_FILTER_DELAY, 0.16f, 60.0f);
@@ -175,103 +229,103 @@ void SVXBridge::processSVXLink()
 {
   unsigned char svxbuf[BUFFER_LENGTH];
   int n = readSVX(svxbuf, BUFFER_LENGTH);
-  if(n > 1)
+  if(n < 2)
+    return;
+
+  unsigned int len = (unsigned int)n / sizeof(int16_t);
+  int16_t* svxSamples = (int16_t*)svxbuf;
+  for(unsigned int i=0; i < len; i++)
   {
-    unsigned int len = (unsigned int)n / sizeof(int16_t);
-    int16_t* svxSamples = (int16_t*)svxbuf;
-    for(unsigned int i=0; i < len; i++)
-    {
-      m_inputBuffer.push_back(svxSamples[i]);
-    }
-    if(m_inputBuffer.size() > SAMPLES_PER_SLOT * 8U)
-    {
-      m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
-    }
+    m_inputBuffer.push_back(svxSamples[i]);
+  }
+  if(m_inputBuffer.size() > SAMPLES_PER_SLOT * 8U)
+  {
+    m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
   }
 }
 
 void SVXBridge::processModem()
 {
   uint32_t num_items = SAMPLES_PER_SLOT;
-  unsigned char recv_message[BUFFER_LENGTH];
-  int n = readModem(recv_message, BUFFER_LENGTH);
+  unsigned char recv_message[NETWORK_TX_PACKET_SIZE];
+  int n = readModem(recv_message, NETWORK_TX_PACKET_SIZE);
 
-  if(n == NETWORK_TX_PACKET_SIZE)
+  if((unsigned int)n != NETWORK_TX_PACKET_SIZE)
+    return;
+
+  if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 2U)
   {
-    if(m_inputBuffer.size() >= SAMPLES_PER_SLOT * 2U)
+    m_netTimeout = NET_TIMEOUT_FRAMES;
+    float in_samples[SAMPLES_PER_SLOT * 2U];
+    ::memset(in_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(float));
+    for(unsigned int i=0;i < SAMPLES_PER_SLOT * 2U;i++)
     {
-      m_netTimeout = NET_TIMEOUT_FRAMES;
-      float in_samples[SAMPLES_PER_SLOT * 2U];
-      ::memset(in_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(float));
-      for(unsigned int i=0;i < SAMPLES_PER_SLOT * 2U;i++)
-      {
-        in_samples[i] = float(m_inputBuffer.at(i)) / 32767.0f;
-      }
-
-      float out_samples[SAMPLES_PER_SLOT];
-      ::memset(out_samples, 0U, SAMPLES_PER_SLOT * sizeof(float));
-      downsample(in_samples, SAMPLES_PER_SLOT * 2U, out_samples);
-      m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
-
-      int16_t modem_samples[SAMPLES_PER_SLOT];
-      ::memset(modem_samples, 0U, SAMPLES_PER_SLOT * sizeof(int16_t));
-      for(unsigned int i=0; i< SAMPLES_PER_SLOT; i++)
-      {
-        int32_t s = int32_t(out_samples[i] * 32767.0f * (float(m_txGain) / 100.0f));
-        s = (s < -32767) ? -32767 : s;
-        s = (s > 32767) ? 32767 : s;
-        modem_samples[i] = int16_t(s);
-      }
-
-      unsigned char reply[NETWORK_RX_PACKET_SIZE];
-      ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
-      ::memcpy(reply, &num_items, sizeof(uint32_t));
-      ::memcpy(reply + sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                (unsigned char *)modem_samples, num_items*sizeof(int16_t));
-      writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
-    }
-    else if(m_netTimeout > 0U)
-    {
-      unsigned char reply[NETWORK_RX_PACKET_SIZE];
-      ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
-      ::memcpy(reply, &num_items, sizeof(uint32_t));
-      writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
-      m_netTimeout--;
+      in_samples[i] = float(m_inputBuffer.at(i)) / 32767.0f;
     }
 
-    uint32_t data_size = 0;
-    ::memcpy(&data_size, recv_message, sizeof(uint32_t));
-    if(data_size != SAMPLES_PER_SLOT)
-    {
-      ::fprintf(stderr, "Received malformed packet size from MMDVM-Multi: %u\n", data_size);
-      return;
-    }
-    else
-    {
-      int16_t modem_samples[SAMPLES_PER_SLOT];
-      ::memset(modem_samples, 0U, SAMPLES_PER_SLOT * sizeof(int16_t));
-      ::memcpy(&modem_samples, recv_message + 2U * sizeof(uint32_t) + data_size * sizeof(uint8_t), num_items * sizeof(int16_t));
-      float in_samples[SAMPLES_PER_SLOT];
-      ::memset(in_samples, 0U, SAMPLES_PER_SLOT * sizeof(float));
-      for(unsigned int i=0;i < SAMPLES_PER_SLOT;i++)
-      {
-        in_samples[i] = float(modem_samples[i]) / 32767.0f;
-      }
-      float out_samples[SAMPLES_PER_SLOT * 2U];
-      ::memset(out_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(float));
-      upsample(in_samples, SAMPLES_PER_SLOT, out_samples);
+    float out_samples[SAMPLES_PER_SLOT];
+    ::memset(out_samples, 0U, SAMPLES_PER_SLOT * sizeof(float));
+    downsample(in_samples, SAMPLES_PER_SLOT * 2U, out_samples);
+    m_inputBuffer.erase(m_inputBuffer.begin(), m_inputBuffer.begin() + SAMPLES_PER_SLOT * 2U);
 
-      int16_t svx_samples[SAMPLES_PER_SLOT * 2U];
-      ::memset(svx_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(int16_t));
-      for(unsigned int i=0; i< SAMPLES_PER_SLOT * 2U; i++)
-      {
-        int32_t s = int32_t(out_samples[i] * 32767.0f * (float(m_rxGain) / 100.0f));
-        s = (s < -32767) ? -32767 : s;
-        s = (s > 32767) ? 32767 : s;
-        svx_samples[i] = int16_t(s);
-      }
-      writeSVX((unsigned char*)&svx_samples, SAMPLES_PER_SLOT * 2U * sizeof(int16_t));
+    int16_t modem_samples[SAMPLES_PER_SLOT];
+    ::memset(modem_samples, 0U, SAMPLES_PER_SLOT * sizeof(int16_t));
+    for(unsigned int i=0; i< SAMPLES_PER_SLOT; i++)
+    {
+      int32_t s = int32_t(out_samples[i] * 32767.0f * (float(m_txGain) / 100.0f));
+      s = (s < -32767) ? -32767 : s;
+      s = (s > 32767) ? 32767 : s;
+      modem_samples[i] = int16_t(s);
     }
+
+    unsigned char reply[NETWORK_RX_PACKET_SIZE];
+    ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
+    ::memcpy(reply, &num_items, sizeof(uint32_t));
+    ::memcpy(reply + sizeof(uint32_t) + num_items * sizeof(uint8_t),
+              (unsigned char *)modem_samples, num_items*sizeof(int16_t));
+    writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
+  }
+  else if(m_netTimeout > 0U)
+  {
+    unsigned char reply[NETWORK_RX_PACKET_SIZE];
+    ::memset(reply, 0U, NETWORK_RX_PACKET_SIZE * sizeof(unsigned char));
+    ::memcpy(reply, &num_items, sizeof(uint32_t));
+    writeModem((unsigned char*)reply, NETWORK_RX_PACKET_SIZE);
+    m_netTimeout--;
+  }
+
+  uint32_t data_size = 0;
+  ::memcpy(&data_size, recv_message, sizeof(uint32_t));
+  if(data_size != SAMPLES_PER_SLOT)
+  {
+    ::fprintf(stderr, "Received malformed packet size from MMDVM-Multi: %u\n", data_size);
+    return;
+  }
+  else
+  {
+    int16_t modem_samples[SAMPLES_PER_SLOT];
+    ::memset(modem_samples, 0U, SAMPLES_PER_SLOT * sizeof(int16_t));
+    ::memcpy(&modem_samples, recv_message + 2U * sizeof(uint32_t) + data_size * sizeof(uint8_t), data_size * sizeof(int16_t));
+    float in_samples[SAMPLES_PER_SLOT];
+    ::memset(in_samples, 0U, SAMPLES_PER_SLOT * sizeof(float));
+    for(unsigned int i=0;i < SAMPLES_PER_SLOT;i++)
+    {
+      in_samples[i] = float(modem_samples[i]) / 32767.0f;
+    }
+    float out_samples[SAMPLES_PER_SLOT * 2U];
+    ::memset(out_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(float));
+    upsample(in_samples, SAMPLES_PER_SLOT, out_samples);
+
+    int16_t svx_samples[SAMPLES_PER_SLOT * 2U];
+    ::memset(svx_samples, 0U, SAMPLES_PER_SLOT * 2U * sizeof(int16_t));
+    for(unsigned int i=0; i< SAMPLES_PER_SLOT * 2U; i++)
+    {
+      int32_t s = int32_t(out_samples[i] * 32767.0f * (float(m_rxGain) / 100.0f));
+      s = (s < -32767) ? -32767 : s;
+      s = (s > 32767) ? 32767 : s;
+      svx_samples[i] = int16_t(s);
+    }
+    writeSVX((unsigned char*)&svx_samples, SAMPLES_PER_SLOT * 2U * sizeof(int16_t));
   }
 }
 

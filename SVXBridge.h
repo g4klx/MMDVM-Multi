@@ -19,6 +19,10 @@
 #ifndef SVXBRIDGE_H
 #define SVXBRIDGE_H
 
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pwd.h>
 #include <string.h>
 #include <csignal>
 #include <thread>

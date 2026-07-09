@@ -51,10 +51,10 @@ public:
     bool stopped() const;
 
 private:
-    void getUDPMessage();
-    void nextSlot(unsigned int channel);
+    void readNetwork();
     void processSamples(std::complex<float>* output_samples, bool* channel_idle);
     void setTx(bool* channelIdle);
+    void nextSlot(unsigned int channel);
 
     bool m_running;
     bool m_stopped;

@@ -118,18 +118,9 @@ void Receiver::run()
       }
     }
 
-//    First four usable channels are on the real side of the FFT, the rest in imag,
-//    reversed order to minimize occupied BW for 250k sps
-//    Channel 5 of the PFB (how many total??) wraps around to the imag side and is not usable
-//
-//    Channel 7    Channel 6     Channel 5     Channel 1       Channel 2     Channel 3     Channel 4
-//    434.7500     433.7750      434.8000      434.8250        434.8500      434.8750      434.9000
-//    |             |            |             |               |             |              |
-//    |             |            |             |               |             |              |
-//    |             |            |             |               |             |              |
-// ---|-------------|------------|-------------|---------------|-------------|--------------|---------
-//                                         RX/TX frequency
-//
+    // First four usable channels are on the real side of the FFT, the rest in imag,
+    // reversed order to minimize occupied BW for 250k sps
+    // Channel 5 (6?) of the PFB wraps around to the imag side and is not usable
     for (unsigned k=0; k<m_fillReal; k++)
     {
       for(unsigned j=0;j<RX_INTERP_IN_SIZE;j++)
