@@ -74,6 +74,8 @@ public:
 	unsigned int getBridgeRxGain() const;
 	unsigned int getBridgeTxGain() const;
 
+	int getBridgeSquelch() const;
+
 private:
 	std::string m_file;
 
@@ -116,6 +118,8 @@ private:
 
 	unsigned int m_svxBridgeRxGain;
 	unsigned int m_svxBridgeTxGain;
+
+	int m_svxBridgeSquelch;
 };
 
 #endif

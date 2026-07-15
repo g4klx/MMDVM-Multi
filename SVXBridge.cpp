@@ -151,9 +151,11 @@ int main(int argc, char** argv)
   unsigned int decim = 1U;
   unsigned int rxGain = conf.getBridgeRxGain();
   unsigned int txGain = conf.getBridgeTxGain();
+  unsigned int modemSquelch = std::abs(conf.getBridgeSquelch());
   
   SVXBridge* bridge = new SVXBridge(modemAddress, modemPort, localModemAddress, localModemPort,
-                                    svxAddress, svxPort, localSVXAddress, localSVXPort, interp, decim, rxGain, txGain);
+                                    svxAddress, svxPort, localSVXAddress, localSVXPort, interp,
+                                    decim, rxGain, txGain, modemSquelch);
   if(!bridge->open())
   {
     ::fprintf(stderr, "SVXBridge: Unable to open network connections\n");
@@ -183,14 +185,17 @@ SVXBridge::SVXBridge(const std::string& modemAddress, unsigned int modemPort,
                      const std::string& localModemAddress, unsigned int localModemPort,
                      const std::string& svxAddress, unsigned int svxPort,
                      const std::string& localSVXAddress, unsigned int localSVXPort,
-                     unsigned int interp, unsigned int decim, unsigned int rxGain, unsigned int txGain) :
+                     unsigned int interp, unsigned int decim, unsigned int rxGain,
+                     unsigned int txGain, unsigned int modemSquelch) :
 m_init(false),
+m_rx(false),
 m_addrLenSVX(0U),
 m_addrLenModem(0U),
 m_decim(decim),
 m_interp(interp),
 m_rxGain(rxGain),
 m_txGain(txGain),
+m_modemSquelch(modemSquelch),
 m_netTimeout(NET_TIMEOUT_FRAMES)
 {
   m_inputBuffer.reserve(SAMPLES_PER_SLOT * 2U);
@@ -296,13 +301,20 @@ void SVXBridge::processModem()
 
   uint32_t data_size = 0;
   ::memcpy(&data_size, recv_message, sizeof(uint32_t));
+  uint32_t rssi = 0;
+  ::memcpy(&rssi, recv_message + sizeof(uint32_t), sizeof(uint32_t));
   if(data_size != SAMPLES_PER_SLOT)
   {
     ::fprintf(stderr, "Received malformed packet size from MMDVM-Multi: %u\n", data_size);
     return;
   }
-  else
+  else if(rssi < m_modemSquelch)
   {
+    if(!m_rx)
+    {
+      ::fprintf(stdout, "Squelch open: %d dbFS\n", -rssi);
+      m_rx = true;
+    }
     int16_t modem_samples[SAMPLES_PER_SLOT];
     ::memset(modem_samples, 0U, SAMPLES_PER_SLOT * sizeof(int16_t));
     ::memcpy(&modem_samples, recv_message + 2U * sizeof(uint32_t) + data_size * sizeof(uint8_t), data_size * sizeof(int16_t));
@@ -326,6 +338,14 @@ void SVXBridge::processModem()
       svx_samples[i] = int16_t(s);
     }
     writeSVX((unsigned char*)&svx_samples, SAMPLES_PER_SLOT * 2U * sizeof(int16_t));
+  }
+  else if(rssi >= m_modemSquelch)
+  {
+    if(m_rx)
+    {
+      ::fprintf(stdout, "Squelch closed: %d dbFS\n", -rssi);
+      m_rx = false;
+    }
   }
 }
 
