@@ -53,15 +53,13 @@ CMakeLists.txt.user*
 *.idb
 *.ilk
 *.pdb
-*.sln
 *.suo
 *.vcproj
 *vcproj.*.*.user
 *.ncb
 *.sdf
 *.opensdf
-*.vcxproj
-*vcxproj.*
+*vcxproj.user
 
 # MinGW generated files
 *.Debug
