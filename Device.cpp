@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2025, 2026 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2025,2026 by Jonathan Naylor G4KLX
  *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -22,11 +22,15 @@
 
 #include <cassert>
 
+const size_t RX_CHANNEL = 0;
+const size_t TX_CHANNEL = 0;
+
 Device::Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
                float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
                unsigned int num_pfb_channels, bool debug) :
 m_soapyDeviceType(deviceType),
 m_soapyDeviceURI(modemURI),
+m_type(SOAPY_TYPE::NONE),
 m_device(nullptr),
 m_rxStream(nullptr),
 m_txStream(nullptr),
@@ -61,7 +65,9 @@ m_soapyInit(false)
         rxArgs["bufflen"] = rxBufLen.c_str();
         txArgs["bufflen"] = txBufLen.c_str();
         ::LogInfo("Using Pluto SDR driver uri %s", uri);
-    } else if (m_soapyDeviceType.compare("limesdr") == 0 || m_soapyDeviceType.compare("lime") == 0) {
+        m_type = SOAPY_TYPE::PlutoSDR;
+    } else if (m_soapyDeviceType.compare("limesdr") == 0  || m_soapyDeviceType.compare("lime") == 0 ||
+               m_soapyDeviceType.compare("limemini") == 0 || m_soapyDeviceType.compare("limenet-micro") == 0) {
         const char* uri = m_soapyDeviceURI.empty() ? LIME_DEFAULT_URI : m_soapyDeviceURI.c_str();
         devArgs["driver"] = "lime";
         rxArgs["uri"]     = uri;
@@ -69,6 +75,7 @@ m_soapyInit(false)
         rxArgs["latency"] = "0";
         txArgs["latency"] = "0";
         ::LogInfo("Using Lime SDR driver uri %s", uri);
+        m_type = SOAPY_TYPE::LimeSDR;
     } else if (m_soapyDeviceType.compare("usrp") == 0) {
         const char* uri = m_soapyDeviceURI.c_str();
         devArgs["driver"] = "uhd";
@@ -76,36 +83,39 @@ m_soapyInit(false)
         txArgs["uri"]     = uri;
         rxArgs["recv_frame_size"] = "1024";
         ::LogInfo("Using Ettus USRP driver uri %s", uri);
+        m_type = SOAPY_TYPE::USRP;
     } else if (m_soapyDeviceType.compare("mucell") == 0) {
         devArgs["driver"] = "mucell";
         ::LogInfo("Using the muCell driver");
+        m_type = SOAPY_TYPE::MuCell;
     } else {
         devArgs["driver"] = "sx";
         ::LogInfo("Using the SXCeiver driver");
+        m_type = SOAPY_TYPE::SXceiver;
     }
 
     try {
         m_device = SoapySDR::Device::make(devArgs);
         assert(m_device != nullptr);
     
-        m_device->setSampleRate(SOAPY_SDR_RX, 0, m_sampleRate);
-        m_device->setSampleRate(SOAPY_SDR_TX, 0, m_sampleRate);
+        m_device->setSampleRate(SOAPY_SDR_RX, RX_CHANNEL, m_sampleRate);
+        m_device->setSampleRate(SOAPY_SDR_TX, TX_CHANNEL, m_sampleRate);
     
-        m_device->setFrequency(SOAPY_SDR_RX, 0, m_soapyRXFreq);
-        m_device->setFrequency(SOAPY_SDR_TX, 0, m_soapyTXFreq);
+        m_device->setFrequency(SOAPY_SDR_RX, RX_CHANNEL, m_soapyRXFreq);
+        m_device->setFrequency(SOAPY_SDR_TX, TX_CHANNEL, m_soapyTXFreq);
     
-        m_device->setAntenna(SOAPY_SDR_RX, 0, m_rxAntenna);
-        m_device->setAntenna(SOAPY_SDR_TX, 0, m_txAntenna);
+        m_device->setAntenna(SOAPY_SDR_RX, RX_CHANNEL, m_rxAntenna);
+        m_device->setAntenna(SOAPY_SDR_TX, TX_CHANNEL, m_txAntenna);
 
         // Device TX calibration routine requires normal gains for RF loopback
-        m_device->setGain(SOAPY_SDR_RX, 0, m_soapyRXGain);
-        m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
+        m_device->setGain(SOAPY_SDR_RX, RX_CHANNEL, m_soapyRXGain);
+        m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, m_soapyTXGain);
 
-        m_device->setBandwidth(SOAPY_SDR_RX, 0, m_sampleRate);
-        m_device->setBandwidth(SOAPY_SDR_TX, 0, m_sampleRate);
+        m_device->setBandwidth(SOAPY_SDR_RX, RX_CHANNEL, m_sampleRate);
+        m_device->setBandwidth(SOAPY_SDR_TX, TX_CHANNEL, m_sampleRate);
 
-        m_rxStream = m_device->setupStream(SOAPY_SDR_RX, "CF32", {0}, rxArgs);
-        m_txStream = m_device->setupStream(SOAPY_SDR_TX, "CF32", {0}, txArgs);
+        m_rxStream = m_device->setupStream(SOAPY_SDR_RX, "CF32", {RX_CHANNEL}, rxArgs);
+        m_txStream = m_device->setupStream(SOAPY_SDR_TX, "CF32", {TX_CHANNEL}, txArgs);
 
         m_device->activateStream(m_txStream);
         m_device->activateStream(m_rxStream);
@@ -116,13 +126,13 @@ m_soapyInit(false)
         m_rxMTU = m_device->getStreamMTU(m_rxStream);
         m_txMTU = m_device->getStreamMTU(m_txStream);
 
-        SoapySDR::Range txGainRange = m_device->getGainRange(SOAPY_SDR_TX, 0);
-        SoapySDR::Range rxGainRange = m_device->getGainRange(SOAPY_SDR_RX, 0);
-        m_minTxGain = (float)txGainRange.minimum() + (float)txGainRange.step();
+        SoapySDR::Range txGainRange = m_device->getGainRange(SOAPY_SDR_TX, TX_CHANNEL);
+        SoapySDR::Range rxGainRange = m_device->getGainRange(SOAPY_SDR_RX, RX_CHANNEL);
+        m_minTxGain = float(txGainRange.minimum()) + float(txGainRange.step());
 
         ::LogMessage("Soapy device initialized");
-        ::LogMessage("  RX stream MTU is %d", m_rxMTU);
-        ::LogMessage("  TX stream MTU is %d", m_txMTU);
+        ::LogMessage("  RX stream MTU is %u", m_rxMTU);
+        ::LogMessage("  TX stream MTU is %u", m_txMTU);
         ::LogMessage("  Minimum TX gain: %f dB", txGainRange.minimum());
         ::LogMessage("  Maximum TX gain: %f dB", txGainRange.maximum());
         ::LogMessage("  Minimum RX gain: %f dB", rxGainRange.minimum());
@@ -179,11 +189,21 @@ unsigned int Device::getTxMTU() const
 
 void Device::setTx(bool tx)
 {
-    // TODO: SX handling
-    if (tx)
-        m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
-    else
-        m_device->setGain(SOAPY_SDR_TX, 0, m_minTxGain);
+    if (tx) {
+        ::LogMessage("TX ON");
+
+        if ((m_type == SOAPY_TYPE::MuCell) || (m_type == SOAPY_TYPE::SXceiver))
+            m_device->setAntenna(SOAPY_SDR_TX, TX_CHANNEL, "TX");
+        else
+            m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, m_soapyTXGain);
+    } else {
+        ::LogMessage("TX OFF");
+
+        if ((m_type == SOAPY_TYPE::MuCell) || (m_type == SOAPY_TYPE::SXceiver))
+            m_device->setAntenna(SOAPY_SDR_TX, TX_CHANNEL, "NONE");
+        else
+            m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, m_minTxGain);
+    }
 
     // poke GPIO/relay code here
 }

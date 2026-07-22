@@ -24,6 +24,15 @@
 #include <SoapySDR/Logger.hpp>
 #include "Constants.h"
 
+enum class SOAPY_TYPE {
+    NONE,
+    LimeSDR,
+    MuCell,
+    PlutoSDR,
+    SXceiver,
+    USRP
+};
+
 class Device
 {
 public:
@@ -48,6 +57,7 @@ private:
     std::string          m_soapyDeviceType;
     std::string          m_soapyDeviceURI;
 
+    SOAPY_TYPE           m_type;
     SoapySDR::Device*    m_device;
     SoapySDR::Stream*    m_rxStream;
     SoapySDR::Stream*    m_txStream;
