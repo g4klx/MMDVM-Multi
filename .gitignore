@@ -18,6 +18,7 @@
 *.qm
 .#*
 *.*#
+.vs
 core
 !core/
 tags

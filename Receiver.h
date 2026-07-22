@@ -42,13 +42,13 @@ public:
              Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
              unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp);
     ~Receiver();
+
     void start();
     void run();
     void stop();
     bool stopped() const;
     
 private:
-    void processSamples(unsigned int channel, std::complex<float>* in_samples, float* output_samples);
     bool m_running;
     bool m_stopped;
     bool m_timestamping;
@@ -70,6 +70,7 @@ private:
     std::vector<int16_t> m_sampleBuf[MAX_MMDVM_CHANNELS];
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];
 
+    void processSamples(unsigned int channel, std::complex<float>* in_samples, float* output_samples);
 };
 
 #endif // RECEIVER_H

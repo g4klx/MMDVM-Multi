@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2015,2016,2026 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,28 +16,42 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#if !defined(THREAD_H)
+#define	THREAD_H
 
-#include <complex>
-#include <string.h>
-#include <liquid/liquid.h>
-#include "Constants.h"
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
-class Rotator
+class CThread
 {
 public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
+  CThread();
+  virtual ~CThread();
 
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
+  virtual bool run();
 
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
+  virtual void entry() = 0;
+
+  virtual void wait();
+
+  static void sleepMilli(unsigned int ms);
+  static void sleepNano(unsigned int ns);
+
 private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
+#if defined(_WIN32) || defined(_WIN64)
+  HANDLE    m_handle;
+#else
+  pthread_t m_thread;
+#endif
 
+#if defined(_WIN32) || defined(_WIN64)
+  static DWORD __stdcall helper(LPVOID arg);
+#else
+  static void* helper(void* arg);
+#endif
 };
 
-#endif // ROTATOR_H
+#endif

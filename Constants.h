@@ -50,8 +50,4 @@ static const unsigned int RX_SAMP_IN_SIZE = RX_INTERP_IN_SIZE * MAX_PFB_CHANNELS
 static const unsigned int NETWORK_TX_PACKET_SIZE = 8U + SAMPLES_PER_SLOT + SAMPLES_PER_SLOT * 2U;
 static const unsigned int NETWORK_RX_PACKET_SIZE = 4U + SAMPLES_PER_SLOT + SAMPLES_PER_SLOT * 2U;
 
-
-
-
-
 #endif // CONSTANTS_H

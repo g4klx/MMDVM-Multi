@@ -33,7 +33,7 @@ public:
 	// The General section
 	bool         getDaemon() const;
 	unsigned int getNumChannels() const;
-	int 				 getSampleDelay() const;
+	int          getSampleDelay() const;
 	unsigned int getRFDelay() const;
 	unsigned int getRSSICalibration() const;
 	unsigned int getSampleRate() const;
@@ -42,6 +42,16 @@ public:
 
 	// The Log section
 	unsigned int getLogDisplayLevel() const;
+	unsigned int getLogMQTTLevel() const;
+
+	// The MQTT section
+	std::string    getMQTTHost() const;
+	unsigned short getMQTTPort() const;
+	unsigned int   getMQTTKeepalive() const;
+	std::string    getMQTTName() const;
+	bool           getMQTTAuthEnabled() const;
+	std::string    getMQTTUsername() const;
+	std::string    getMQTTPassword() const;
 
 	// The Modem section
 	std::string  getModemType() const;
@@ -79,7 +89,7 @@ private:
 
 	bool         m_daemon;
 	unsigned int m_numChannels;
-	int 				 m_sampleDelay;
+	int          m_sampleDelay;
 	unsigned int m_RFDelay;
 	unsigned int m_RSSICalibration;
 	unsigned int m_sampleRate;
@@ -87,6 +97,15 @@ private:
 	unsigned int m_symbolDeviation;
 
 	unsigned int m_logDisplayLevel;
+	unsigned int m_logMQTTLevel;
+
+	std::string  m_mqttHost;
+	unsigned short m_mqttPort;
+	unsigned int m_mqttKeepalive;
+	std::string  m_mqttName;
+	bool         m_mqttAuthEnabled;
+	std::string  m_mqttUsername;
+	std::string  m_mqttPassword;
 
 	std::string  m_modemType;
 	std::string  m_modemURI;

@@ -17,6 +17,7 @@
  */
 
 #include "UDPSocket.h"
+#include "Log.h"
 
 #include <cassert>
 #include <cerrno>
@@ -67,7 +68,7 @@ int CUDPSocket::lookup(const std::string& hostname, unsigned short port, sockadd
 		paddr->sin_family = AF_INET;
 		paddr->sin_port = htons(port);
 		paddr->sin_addr.s_addr = htonl(INADDR_NONE);
-		::fprintf(stderr, "Cannot find address for host %s\n", hostname.c_str());
+		::LogError("Cannot find address for host %s", hostname.c_str());
 		return err;
 	}
 
@@ -148,7 +149,7 @@ bool CUDPSocket::open()
 	// To determine protocol family, call lookup() on the local address first.
 	int err = lookup(m_localAddress, m_localPort, addr, addrlen, hints);
 	if (err != 0) {
-		::fprintf(stderr, "The local address is invalid - %s\n", m_localAddress.c_str());
+		::LogError("The local address is invalid - %s", m_localAddress.c_str());
 		return false;
 	}
 
@@ -156,25 +157,25 @@ bool CUDPSocket::open()
 
 	m_fd = ::socket(m_af, SOCK_DGRAM, 0);
 	if (m_fd < 0) {
-		::fprintf(stderr, "Cannot create the UDP socket, err: %d\n", errno);
+		::LogError("Cannot create the UDP socket, err: %d", errno);
 		return false;
 	}
 
 	if (m_localPort > 0U) {
 		int reuse = 1;
 		if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) == -1) {
-			::fprintf(stderr, "Cannot set the UDP socket option, err: %d\n", errno);
+			::LogError("Cannot set the UDP socket option, err: %d", errno);
 			close();
 			return false;
 		}
 
 		if (::bind(m_fd, (sockaddr*)&addr, addrlen) == -1) {
-			::fprintf(stderr, "Cannot bind the UDP address, err: %d\n", errno);
+			::LogError("Cannot bind the UDP address, err: %d", errno);
 			close();
 			return false;
 		}
 
-		::fprintf(stdout, "Opening UDP port on %hu\n", m_localPort);
+		::LogMessage("Opening UDP port on %hu", m_localPort);
 	}
 
 	return true;
@@ -197,7 +198,7 @@ int CUDPSocket::read(unsigned char* buffer, unsigned int length, sockaddr_storag
 	int ret = ::poll(&pfd, 1, 0);
 
 	if (ret < 0) {
-		::fprintf(stderr, "Error returned from UDP poll, err: %d\n", errno);
+		::LogError("Error returned from UDP poll, err: %d", errno);
 		return -1;
 	}
 
@@ -208,10 +209,10 @@ int CUDPSocket::read(unsigned char* buffer, unsigned int length, sockaddr_storag
 
 	ssize_t len = ::recvfrom(m_fd, (char*)buffer, length, 0, (sockaddr *)&address, &size);
 	if (len <= 0) {
-		::fprintf(stderr, "Error returned from recvfrom, err: %d\n", errno);
+		::LogError("Error returned from recvfrom, err: %d", errno);
 
 		if (len == -1 && errno == ENOTSOCK) {
-			::fprintf(stdout, "Re-opening UDP port on %hu\n", m_localPort);
+			::LogMessage("Re-opening UDP port on %hu", m_localPort);
 			close();
 			open();
 		}
@@ -234,7 +235,7 @@ bool CUDPSocket::write(const unsigned char* buffer, unsigned int length, const s
 	ssize_t ret = ::sendto(m_fd, (char *)buffer, length, 0, (sockaddr *)&address, addressLength);
 
 	if (ret < 0) {
-		::fprintf(stderr, "Error returned from sendto, err: %d\n", errno);
+		::LogError("Error returned from sendto, err: %d", errno);
 	} else {
 		if (ret == ssize_t(length))
 			result = true;
@@ -250,4 +251,3 @@ void CUDPSocket::close()
 		m_fd = -1;
 	}
 }
-

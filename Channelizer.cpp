@@ -17,29 +17,31 @@
  */
 
 #include "Channelizer.h"
-#include <assert.h>
+
+#include <cassert>
 
 Channelizer::Channelizer(unsigned int num_pfb_channels) :
 m_channels(num_pfb_channels)
 {
-  assert(m_channels > 3U);
-  // TODO: design filters for better antialias and image rejection
-  m_synthesizer = firpfbch_crcf_create_kaiser(LIQUID_SYNTHESIZER, m_channels, PFB_FILTER_DELAY, 70.0f);
-  m_analyzer = firpfbch_crcf_create_kaiser(LIQUID_ANALYZER, m_channels, PFB_FILTER_DELAY, 70.0f);
+	assert(m_channels > 3U);
+
+	// TODO: design filters for better antialias and image rejection
+	m_synthesizer = ::firpfbch_crcf_create_kaiser(LIQUID_SYNTHESIZER, m_channels, PFB_FILTER_DELAY, 70.0F);
+	m_analyzer    = ::firpfbch_crcf_create_kaiser(LIQUID_ANALYZER, m_channels, PFB_FILTER_DELAY, 70.0F);
 }
 
 Channelizer::~Channelizer()
 {
-  firpfbch_crcf_destroy(m_synthesizer);
-  firpfbch_crcf_destroy(m_analyzer);
+	::firpfbch_crcf_destroy(m_synthesizer);
+	::firpfbch_crcf_destroy(m_analyzer);
 }
 
 void Channelizer::synthesize(std::complex<float>* in_samples, std::complex<float>* out_samples)
 {
-  firpfbch_crcf_synthesizer_execute(m_synthesizer, in_samples, out_samples);
+	::firpfbch_crcf_synthesizer_execute(m_synthesizer, in_samples, out_samples);
 }
 
 void Channelizer::channelize(std::complex<float>* in_samples, std::complex<float>* out_samples)
 {
-  firpfbch_crcf_analyzer_execute(m_analyzer, in_samples, out_samples);
+	::firpfbch_crcf_analyzer_execute(m_analyzer, in_samples, out_samples);
 }

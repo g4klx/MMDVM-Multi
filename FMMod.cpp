@@ -17,35 +17,43 @@
  */
 
 #include "FMMod.h"
-#include <assert.h>
+
+#include <cassert>
 
 FMMod::FMMod(float deviation, unsigned int num_channels) :
 m_activeChannels(num_channels)
 {
-  assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
-  for(unsigned i=0;i<m_activeChannels;i++)
-  {
-    m_FMmod[i] = freqmod_create(deviation);
-    m_FMdemod[i] = freqdem_create(deviation);
+  assert(num_channels <= MAX_MMDVM_CHANNELS);
+
+  for (unsigned int i = 0U; i < m_activeChannels; i++) {
+      m_FMmod[i]   = ::freqmod_create(deviation);
+      m_FMdemod[i] = ::freqdem_create(deviation);
   }
 }
 
 FMMod::~FMMod()
 {
-  for(unsigned i=0;i<m_activeChannels;i++)
-  {
-    freqmod_destroy(m_FMmod[i]);
-    freqdem_destroy(m_FMdemod[i]);
-  }
+    for (unsigned int i = 0U; i < m_activeChannels; i++) {
+        ::freqmod_destroy(m_FMmod[i]);
+        ::freqdem_destroy(m_FMdemod[i]);
+    }
 }
 
 void FMMod::modulate(unsigned int channel, float* in_samples, const unsigned int num_samples, std::complex<float>* out_samples)
 {
-  freqmod_modulate_block(m_FMmod[channel], in_samples, num_samples, out_samples);
+    assert(channel < m_activeChannels);
+    assert(in_samples != nullptr);
+    assert(out_samples != nullptr);
+
+    ::freqmod_modulate_block(m_FMmod[channel], in_samples, num_samples, out_samples);
 }
 
 void FMMod::demodulate(unsigned int channel, std::complex<float>* in_samples, const unsigned int num_samples, float* out_samples)
 {
-  freqdem_demodulate_block(m_FMdemod[channel], in_samples, num_samples, out_samples);
+    assert(channel < m_activeChannels);
+    assert(in_samples != nullptr);
+    assert(out_samples != nullptr);
+
+    ::freqdem_demodulate_block(m_FMdemod[channel], in_samples, num_samples, out_samples);
 }
 

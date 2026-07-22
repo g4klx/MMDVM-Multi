@@ -18,7 +18,8 @@
  */
 
 #include "SVXBridge.h"
-#include <assert.h>
+
+#include <cassert>
 
 const unsigned int BUFFER_LENGTH = 8000U;
 const unsigned int NET_TIMEOUT_FRAMES = 25U;

@@ -29,10 +29,13 @@ class Resampler
 public:
     Resampler(unsigned int interp, unsigned int decim, float bw, unsigned int num_channels);
     ~Resampler();
+
     void upsample(unsigned int channel, std::complex<float>* in_samples,
                   unsigned int num_samples, std::complex<float>* out_samples);
+
     void downsample(unsigned int channel, std::complex<float>* in_samples,
                     unsigned int num_samples, std::complex<float>* out_samples);
+
     unsigned int getInterp() const;
     unsigned int getDecim() const;
     
@@ -40,6 +43,7 @@ private:
     unsigned int m_decim;
     unsigned int m_interp;
     unsigned int m_activeChannels;
+
     rresamp_crcf m_upsampler[MAX_MMDVM_CHANNELS];
     rresamp_crcf m_downsampler[MAX_MMDVM_CHANNELS];
 };

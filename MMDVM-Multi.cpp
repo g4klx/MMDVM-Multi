@@ -17,26 +17,32 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <sys/types.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <pwd.h>
-#include <thread>
-#include <chrono>
-#include <string>
-#include <csignal>
-#include <cmath>
+#include "MQTTConnection.h"
 #include "Constants.h"
 #include "Network.h"
 #include "Device.h"
 #include "DMRTiming.h"
 #include "Receiver.h"
 #include "Transmitter.h"
+#include "Thread.h"
 #include "FMMod.h"
 #include "Resampler.h"
 #include "Rotator.h"
 #include "Channelizer.h"
+#include "Version.h"
 #include "Conf.h"
+#include "Log.h"
+#include "GitVersion.h"
+
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pwd.h>
+#include <string>
+#include <csignal>
+#include <cmath>
+
+extern CMQTTConnection* m_mqtt;
 
 const char* DEFAULT_INI_FILE = "/etc/MMDVM-Multi.ini";
 bool running = false;
@@ -45,21 +51,22 @@ void signal_handler(int signal)
 {
     switch (signal) {
         case 2:
-            ::fprintf(stdout, "MMDVM-Multi exited on receipt of SIGINT\n");
+            ::LogInfo("MMDVM-Multi-%s exited on receipt of SIGINT", VERSION);
             break;
         case 15:
-            ::fprintf(stdout, "MMDVM-Multi exited on receipt of SIGTERM\n");
+            ::LogInfo("MMDVM-Multi-%s exited on receipt of SIGTERM", VERSION);
             break;
         case 1:
-            ::fprintf(stdout, "MMDVM-Multi exited on receipt of SIGHUP\n");
+            ::LogInfo("MMDVM-Multi-%s exited on receipt of SIGHUP", VERSION);
             break;
         case 10:
-            ::fprintf(stdout, "MMDVM-Multi is restarting on receipt of SIGUSR1\n");
+            ::LogInfo("MMDVM-Multi-%s is restarting on receipt of SIGUSR1", VERSION);
             break;
         default:
-            ::fprintf(stdout, "MMDVM-Multi exited on receipt of an unknown signal\n");
+            ::LogInfo("MMDVM-Multi-%s exited on receipt of an unknown signal", VERSION);
             break;
     }
+
     running = false;
 }
 
@@ -70,7 +77,7 @@ int main(int argc, char** argv)
         for (int currentArg = 1; currentArg < argc; ++currentArg) {
             std::string arg = argv[currentArg];
             if ((arg == "-v") || (arg == "--version")) {
-                ::fprintf(stdout, "MMDVM-Multi version unknown\n");
+                ::fprintf(stdout, "MMDVM-Multi version %s git #%.7s\n", VERSION, gitversion);
                 return 0;
             } else if (arg.substr(0, 1) == "-") {
                 ::fprintf(stderr, "Usage: MMDVM-Multi [filename]\n");
@@ -141,6 +148,17 @@ int main(int argc, char** argv)
       }
     }
 
+    ::LogInitialise(conf.getLogDisplayLevel(), conf.getLogMQTTLevel());
+
+    std::vector<std::pair<std::string, void (*)(const unsigned char*, unsigned int)>> subscriptions;
+    m_mqtt = new CMQTTConnection(conf.getMQTTHost(), conf.getMQTTPort(), conf.getMQTTName(), conf.getMQTTAuthEnabled(), conf.getMQTTUsername(), conf.getMQTTPassword(), subscriptions, conf.getMQTTKeepalive());
+    ret = m_mqtt->open();
+    if (!ret) {
+        ::fprintf(stderr, "MMDVM-Multi: unable to start the MQTT Publisher\n");
+        delete m_mqtt;
+        m_mqtt = nullptr;
+    }
+
     bool debug = conf.getModemTrace();
     unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
     active_channels = std::max<unsigned int>(active_channels, 1U);
@@ -156,20 +174,20 @@ int main(int argc, char** argv)
     float baseband_shift = 12500.0f;
     float fractional_bandwidth = 0.4f;
     unsigned int power_calibration = conf.getRSSICalibration();
-    if((sample_rate % channel_spacing) != 0U)
-    {
-        ::fprintf(stderr, "MMDVM-Multi: Sample Rate must be a multiple of channel space\n");
+
+    if ((sample_rate % channel_spacing) != 0U) {
+        ::LogError("Sample Rate must be a multiple of channel space");
         return 1;
     }
+
     unsigned int num_pfb_channels = sample_rate / channel_spacing;
-    if(num_pfb_channels > MAX_PFB_CHANNELS)
-    {
-        ::fprintf(stderr, "MMDVM-Multi: The sample rate %d is not supported\n", sample_rate);
+    if (num_pfb_channels > MAX_PFB_CHANNELS) {
+        ::LogError("The sample rate %d is not supported", sample_rate);
         return 1;
     }
-    if(active_channels >= num_pfb_channels)
-    {
-        ::fprintf(stderr, "MMDVM-Multi: The number of channels must be lower than %d for this sample rate\n", num_pfb_channels);
+
+    if (active_channels >= num_pfb_channels) {
+        ::LogError("The number of channels must be lower than % d for this sample rate", num_pfb_channels);
         return 1;
     }
 
@@ -177,10 +195,10 @@ int main(int argc, char** argv)
     unsigned short modemPort = conf.getNetworkModemPort();
     std::string localAddress = conf.getNetworkLocalAddress();
     unsigned short localPort = conf.getNetworkLocalPort();
+
     Network* network = new Network(modemAddress, modemPort, localAddress, localPort, active_channels);
-    if(!network->open())
-    {
-        ::fprintf(stderr, "MMDVM-Multi: Unable to open network connections\n");
+    if (!network->open()) {
+        ::LogError("Unable to open network connections");
         return 1;
     }
 
@@ -188,29 +206,32 @@ int main(int argc, char** argv)
     float tx_gain = float(conf.getTxGain());
     float rx_freq = float(conf.getRxFreq()) - baseband_shift;
     float tx_freq = float(conf.getTxFreq()) - baseband_shift;
+
     std::string rx_antenna = conf.getRxAntenna();
     std::string tx_antenna = conf.getTxAntenna();
     std::string deviceType = conf.getModemType();
-    std::string modemURI = conf.getModemURI();
+    std::string modemURI   = conf.getModemURI();
+
     bool needs_timestamp = true;
-    if (deviceType.compare("plutosdr") == 0 || deviceType.compare("pluto") == 0) {
+    if (deviceType.compare("plutosdr") == 0 || deviceType.compare("pluto") == 0)
         needs_timestamp = false;
-    }
 
     Device* device = new Device(deviceType, modemURI, double(sample_rate), rx_freq, tx_freq,
                                 rx_gain, tx_gain, rx_antenna, tx_antenna, num_pfb_channels, debug);
-    if(!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr))
-    {
+    if (!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr)) {
         network->close();
         return 1;
     }
+
     Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
     Channelizer* channelizer = new Channelizer(num_pfb_channels);
     Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
     FMMod* fm_mod = new FMMod(FSK4_DEVIATION, active_channels);
     DMRTiming* timing = new DMRTiming(rf_delay, sample_delay);
+
     Receiver* rx = new Receiver(network, device, fm_mod, resampler, rotator, channelizer,
                                 timing, active_channels, num_pfb_channels, power_calibration, symbol_deviation, needs_timestamp);
+
     Transmitter* tx = new Transmitter(network, device, fm_mod, resampler, rotator, channelizer,
                                       timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling, symbol_deviation);
 
@@ -218,23 +239,24 @@ int main(int argc, char** argv)
     tx->start();
     running = true;
 
-    std::signal(SIGINT, signal_handler);
+    std::signal(SIGINT,  signal_handler);
     std::signal(SIGTERM, signal_handler);
-    std::signal(SIGHUP, signal_handler);
+    std::signal(SIGHUP,  signal_handler);
     std::signal(SIGUSR1, signal_handler);
 
-    while(running)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    LogInfo("MMDVM-Multi-%s is starting", VERSION);
+    LogInfo("Built %s %s (GitID #%.7s)", __TIME__, __DATE__, gitversion);
+
+    while (running)
+        CThread::sleepMilli(100U);
 
     rx->stop();
     tx->stop();
 
-    while(!tx->stopped() || !rx->stopped())
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
+    while (!tx->stopped() || !rx->stopped())
+        CThread::sleepMilli(100U);
+
+    LogInfo("MMDVM-Multi is stopping");
 
     network->close();
 
@@ -247,6 +269,8 @@ int main(int argc, char** argv)
     delete rotator;
     delete device;
     delete network;
+
+    ::LogFinalise();
 
     return 0;
 }

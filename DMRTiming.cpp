@@ -29,28 +29,27 @@ DMRTimeSlot::~DMRTimeSlot()
 {
 }
 
-
 DMRTiming::DMRTiming(unsigned int rf_delay, int sample_delay)
 {
     m_RFDelay = (long long)rf_delay * 1000000LL;
+
     // RF frontend delay for the Lime is larger than for the USRP by approx 104 microseconds
     m_sampleDelay = (long long)sample_delay * TIME_PER_SAMPLE; // used to adjust SYNC sample position in MMDVM 
-    for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
+
+    for (unsigned int i = 0U; i < MAX_MMDVM_CHANNELS; i++) {
         m_sampleCounter[i] = 0LL;
-    for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
-        m_lastSlot[i] = 0LL;
-    for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
-        m_timeBase[i] = 0LL;
-    for(unsigned i = 0;i < MAX_MMDVM_CHANNELS;i++)
+        m_lastSlot[i]      = 0LL;
+        m_timeBase[i]      = 0LL;
         m_timingInitialized[i] = false;
+    }
 }
 
 DMRTiming::~DMRTiming()
 {
-    for(unsigned k = 0;k < MAX_MMDVM_CHANNELS;k++)
-    {
-        for(unsigned i=0;i<m_timeSlots[k].size();i++)
+    for (unsigned int k = 0U; k < MAX_MMDVM_CHANNELS; k++) {
+        for (unsigned int i = 0U; i < m_timeSlots[k].size(); i++)
             delete m_timeSlots[k].at(i);
+
         m_timeSlots[k].clear();
     }
 }
@@ -65,83 +64,82 @@ void DMRTiming::unlock()
     m_timingMutex.unlock();
 }
 
-
 long long DMRTiming::getTimeDelta(unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
+
     return m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE;
 }
 
 void DMRTiming::setTimer(long long value, unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
+
     m_sampleCounter[cn] = 0LL;
     m_timeBase[cn] = value;
-    if(m_timeBase[cn] > 4LL * SLOT_TIME)
+
+    if (m_timeBase[cn] > 4LL * SLOT_TIME)
         m_timingInitialized[cn] = true;
 }
 
 bool DMRTiming::getInit(unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
+
     return m_timingInitialized[cn];
 }
 
 uint8_t DMRTiming::checkTime(unsigned int cn, bool time_base_received)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
-    if(!time_base_received) // not the first sample in the batch
+
+    if (!time_base_received) // not the first sample in the batch
         m_sampleCounter[cn]++;
-    if(m_timeSlots[cn].size() < 1U)
+
+    if (m_timeSlots[cn].size() < 1U)
         return 0;
 
     long long sample_time = m_timeBase[cn] + m_sampleCounter[cn] * TIME_PER_SAMPLE - TOTAL_FILTER_DELAY - m_sampleDelay;
     DMRTimeSlot* s = m_timeSlots[cn].at(0);
-    if(sample_time >= s->slotTime && s->slotSampleCounter == 0U)
-    {
+
+    if (sample_time >= s->slotTime && s->slotSampleCounter == 0U) {
         s->slotSampleCounter++;
         return s->slotNo;
-    }
-    else if(sample_time >= s->slotTime)
-    {
-        if(s->slotSampleCounter >= (SAMPLES_PER_SLOT - 1U))
-        {
+    } else if (sample_time >= s->slotTime) {
+        if (s->slotSampleCounter >= (SAMPLES_PER_SLOT - 1U)) {
             delete m_timeSlots[cn][0];
             m_timeSlots[cn].erase(m_timeSlots[cn].begin());
-            return 0;
+            return 0U;
         }
+
         s->slotSampleCounter++;
     }
-    return 0;
+
+    return 0U;
 }
 
-long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t &next_slot_timing_correction, unsigned int cn)
+long long DMRTiming::allocateSlot(uint8_t slot_no, int64_t& next_slot_timing_correction, unsigned int cn)
 {
     assert(cn < MAX_MMDVM_CHANNELS);
+
     long long elapsed = getTimeDelta(cn);
-    if(elapsed <= m_lastSlot[cn])
-    {
-        if(cn == 0U)
+
+    if (elapsed <= m_lastSlot[cn]) {
+        if (cn == 0U)
             next_slot_timing_correction = m_lastSlot[cn] - elapsed;
+
+        m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
+    } else if (m_lastSlot[cn] == 0LL) {
+        m_lastSlot[cn] = elapsed;
+    } else if ((elapsed - m_lastSlot[cn]) >= (1LL * SLOT_TIME)) {
+        m_lastSlot[cn] = elapsed;
+    } else {
         m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
     }
-    else if(m_lastSlot[cn] == 0LL)
-    {
-        m_lastSlot[cn] = elapsed;
-    }
-    else if((elapsed - m_lastSlot[cn]) >= (1LL * SLOT_TIME))
-    {
-        m_lastSlot[cn] = elapsed;
-    }
-    else
-    {
-        m_lastSlot[cn] = m_lastSlot[cn] + SLOT_TIME;
-    }
+
     long long nsec = m_lastSlot[cn] + m_RFDelay;
-    DMRTimeSlot *s = new DMRTimeSlot(slot_no, nsec, 0U);
+    DMRTimeSlot* s = new DMRTimeSlot(slot_no, nsec, 0U);
     m_timeSlots[cn].push_back(s);
+
     return nsec;
 }
-
-
-

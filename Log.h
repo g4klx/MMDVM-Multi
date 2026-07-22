@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2015,2016,2020,2022,2023 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,28 +16,21 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#if !defined(LOG_H)
+#define	LOG_H
 
-#include <complex>
-#include <string.h>
-#include <liquid/liquid.h>
-#include "Constants.h"
+#include <string>
 
-class Rotator
-{
-public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
+#define	LogDebug(fmt, ...)	Log(1U, fmt, ##__VA_ARGS__)
+#define	LogMessage(fmt, ...)	Log(2U, fmt, ##__VA_ARGS__)
+#define	LogInfo(fmt, ...)	Log(3U, fmt, ##__VA_ARGS__)
+#define	LogWarning(fmt, ...)	Log(4U, fmt, ##__VA_ARGS__)
+#define	LogError(fmt, ...)	Log(5U, fmt, ##__VA_ARGS__)
+#define	LogFatal(fmt, ...)	Log(6U, fmt, ##__VA_ARGS__)
 
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
+extern void Log(unsigned int level, const char* fmt, ...);
 
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
-private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
+extern void LogInitialise(unsigned int displayLevel, unsigned int mqttLevel);
+extern void LogFinalise();
 
-};
-
-#endif // ROTATOR_H
+#endif

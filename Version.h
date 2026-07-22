@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2026 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,28 +16,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#if !defined(VERSION_H)
+#define  VERSION_H
 
-#include <complex>
-#include <string.h>
-#include <liquid/liquid.h>
-#include "Constants.h"
+#define VERSION "20260722"
 
-class Rotator
-{
-public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
-
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
-private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
-
-};
-
-#endif // ROTATOR_H
+#endif

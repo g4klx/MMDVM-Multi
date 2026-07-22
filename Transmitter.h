@@ -45,6 +45,7 @@ public:
                 unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
                 float dac_scaling, float symbol_deviation);
     ~Transmitter();
+
     void start();
     void run();
     void stop();
@@ -61,24 +62,27 @@ private:
     bool m_timingInit;
     bool m_tx;
     bool m_timestamping;
+
     float m_DACScaling;
     float m_symbolDeviation;
-    unsigned int  m_activeChannels;
-    unsigned int  m_pfbChannels;
-    unsigned int m_fillReal;
-    int64_t m_timingCorrection;
-    Network* m_network;
-    Device* m_device;
-    FMMod* m_fmMod;
-    Resampler* m_resampler;
-    Rotator* m_rotator;
-    Channelizer* m_channelizer;
-    DMRTiming* m_burstTimer;
-    std::thread m_thread;
-    std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
-    std::vector<float> m_sampleBuf[MAX_MMDVM_CHANNELS];
-    uint8_t m_sn[MAX_MMDVM_CHANNELS];
 
+    unsigned int m_activeChannels;
+    unsigned int m_pfbChannels;
+    unsigned int m_fillReal;
+
+    int64_t      m_timingCorrection;
+    Network*     m_network;
+    Device*      m_device;
+    FMMod*       m_fmMod;
+    Resampler*   m_resampler;
+    Rotator*     m_rotator;
+    Channelizer* m_channelizer;
+    DMRTiming*   m_burstTimer;
+    std::thread  m_thread;
+
+    std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
+    std::vector<float>   m_sampleBuf[MAX_MMDVM_CHANNELS];
+    uint8_t              m_sn[MAX_MMDVM_CHANNELS];
 };
 
 #endif // TRANSMITTER_H

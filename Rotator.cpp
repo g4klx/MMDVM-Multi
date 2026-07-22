@@ -18,28 +18,40 @@
 
 #include "Rotator.h"
 
+#include <cassert>
+
 Rotator::Rotator(float rotation_hz, float sample_rate)
 {
-  m_ncoD = nco_crcf_create(LIQUID_VCO);
-  m_ncoU = nco_crcf_create(LIQUID_VCO);
-  nco_crcf_set_phase(m_ncoD, 0.0f);
-  nco_crcf_set_phase(m_ncoU, 0.0f);
-  nco_crcf_set_frequency(m_ncoD, (2.0f*M_PI*rotation_hz/sample_rate));
-  nco_crcf_set_frequency(m_ncoU, (2.0f*M_PI*rotation_hz/sample_rate));
+	assert(sample_rate > 0.0F);
+
+	m_ncoD = ::nco_crcf_create(LIQUID_VCO);
+	m_ncoU = ::nco_crcf_create(LIQUID_VCO);
+
+	::nco_crcf_set_phase(m_ncoD, 0.0F);
+	::nco_crcf_set_phase(m_ncoU, 0.0F);
+
+	::nco_crcf_set_frequency(m_ncoD, (2.0F * M_PI * rotation_hz / sample_rate));
+	::nco_crcf_set_frequency(m_ncoU, (2.0F * M_PI * rotation_hz / sample_rate));
 }
 
 Rotator::~Rotator()
 {
-  nco_crcf_destroy(m_ncoD);
-  nco_crcf_destroy(m_ncoU);
+	::nco_crcf_destroy(m_ncoD);
+	::nco_crcf_destroy(m_ncoU);
 }
 
 void Rotator::rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples)
 {
-  nco_crcf_mix_block_up(m_ncoU, in_samples, out_samples, num_samples);
+	assert(in_samples != nullptr);
+	assert(out_samples != nullptr);
+
+	::nco_crcf_mix_block_up(m_ncoU, in_samples, out_samples, num_samples);
 }
 
 void Rotator::derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples)
 {
-  nco_crcf_mix_block_down(m_ncoD, in_samples, out_samples, num_samples);
+	assert(in_samples != nullptr);
+	assert(out_samples != nullptr);
+
+	::nco_crcf_mix_block_down(m_ncoD, in_samples, out_samples, num_samples);
 }

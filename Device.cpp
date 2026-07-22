@@ -17,8 +17,10 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <assert.h>
 #include "Device.h"
+#include "Log.h"
+
+#include <cassert>
 
 Device::Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
                float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
@@ -37,148 +39,151 @@ m_rxAntenna(rxAntenna),
 m_txAntenna(txAntenna),
 m_soapyInit(false)
 {
-  SoapySDR::Kwargs devArgs;
-  SoapySDR::Kwargs rxArgs;
-  SoapySDR::Kwargs txArgs;
-  if(debug)
-    SoapySDR::setLogLevel(SOAPY_SDR_DEBUG);
-  else
-    SoapySDR::setLogLevel(SOAPY_SDR_INFO);
+    SoapySDR::Kwargs devArgs;
+    SoapySDR::Kwargs rxArgs;
+    SoapySDR::Kwargs txArgs;
 
-  const char* LIME_DEFAULT_URI  = "index=0";         // eg: addr=1111:2222 or serial=xxxxxxxx
-  const char* PLUTO_DEFAULT_URI = "ip:pluto.local";
+    if (debug)
+        SoapySDR::setLogLevel(SOAPY_SDR_DEBUG);
+    else
+        SoapySDR::setLogLevel(SOAPY_SDR_INFO);
 
-  if (m_soapyDeviceType.compare("plutosdr") == 0 || m_soapyDeviceType.compare("pluto") == 0) {
-    const char* uri = m_soapyDeviceURI.empty() ? PLUTO_DEFAULT_URI : m_soapyDeviceURI.c_str();
-    std::string rxBufLen = std::to_string(RX_INTERP_IN_SIZE * num_pfb_channels);
-    std::string txBufLen = std::to_string(TX_INTERP_OUT_SIZE * num_pfb_channels);
-    devArgs["driver"] = "plutosdr";
-    rxArgs["uri"]     = uri;
-    txArgs["uri"]     = uri;
-    rxArgs["bufflen"] = rxBufLen.c_str();
-    txArgs["bufflen"] = txBufLen.c_str();
-    ::fprintf(stdout, "Using Pluto SDR driver uri %s\n", uri);
-  } else if (m_soapyDeviceType.compare("limesdr") == 0 || m_soapyDeviceType.compare("lime") == 0) {
-    const char* uri = m_soapyDeviceURI.empty() ? LIME_DEFAULT_URI : m_soapyDeviceURI.c_str();
-    devArgs["driver"] = "lime";
-    rxArgs["uri"]     = uri;
-    txArgs["uri"]     = uri;
-    rxArgs["latency"] = "0";
-    txArgs["latency"] = "0";
-    ::fprintf(stdout, "Using Lime SDR driver uri %s\n", uri);
-  } else if (m_soapyDeviceType.compare("usrp") == 0) {
-    const char* uri = m_soapyDeviceURI.c_str();
-    devArgs["driver"] = "uhd";
-    rxArgs["uri"]     = uri;
-    txArgs["uri"]     = uri;
-    rxArgs["recv_frame_size"] = "1024";
-    ::fprintf(stdout, "Using Ettus USRP driver uri %s\n", uri);
-  } else if (m_soapyDeviceType.compare("mucell") == 0) {
-    devArgs["driver"] = "mucell";
-  } else {
-    devArgs["driver"] = "sx";
-    ::fprintf(stdout, "Using SX1255 driver \n");
-  }
+    const char* LIME_DEFAULT_URI  = "index=0";         // eg: addr=1111:2222 or serial=xxxxxxxx
+    const char* PLUTO_DEFAULT_URI = "ip:pluto.local";
 
-  try {
-    m_device = SoapySDR::Device::make(devArgs);
-    assert(m_device != nullptr);
+    if (m_soapyDeviceType.compare("plutosdr") == 0 || m_soapyDeviceType.compare("pluto") == 0) {
+        const char* uri = m_soapyDeviceURI.empty() ? PLUTO_DEFAULT_URI : m_soapyDeviceURI.c_str();
+        std::string rxBufLen = std::to_string(RX_INTERP_IN_SIZE * num_pfb_channels);
+        std::string txBufLen = std::to_string(TX_INTERP_OUT_SIZE * num_pfb_channels);
+        devArgs["driver"] = "plutosdr";
+        rxArgs["uri"]     = uri;
+        txArgs["uri"]     = uri;
+        rxArgs["bufflen"] = rxBufLen.c_str();
+        txArgs["bufflen"] = txBufLen.c_str();
+        ::LogInfo("Using Pluto SDR driver uri %s", uri);
+    } else if (m_soapyDeviceType.compare("limesdr") == 0 || m_soapyDeviceType.compare("lime") == 0) {
+        const char* uri = m_soapyDeviceURI.empty() ? LIME_DEFAULT_URI : m_soapyDeviceURI.c_str();
+        devArgs["driver"] = "lime";
+        rxArgs["uri"]     = uri;
+        txArgs["uri"]     = uri;
+        rxArgs["latency"] = "0";
+        txArgs["latency"] = "0";
+        ::LogInfo("Using Lime SDR driver uri %s", uri);
+    } else if (m_soapyDeviceType.compare("usrp") == 0) {
+        const char* uri = m_soapyDeviceURI.c_str();
+        devArgs["driver"] = "uhd";
+        rxArgs["uri"]     = uri;
+        txArgs["uri"]     = uri;
+        rxArgs["recv_frame_size"] = "1024";
+        ::LogInfo("Using Ettus USRP driver uri %s", uri);
+    } else if (m_soapyDeviceType.compare("mucell") == 0) {
+        devArgs["driver"] = "mucell";
+        ::LogInfo("Using the muCell driver");
+    } else {
+        devArgs["driver"] = "sx";
+        ::LogInfo("Using the SXCeiver driver");
+    }
+
+    try {
+        m_device = SoapySDR::Device::make(devArgs);
+        assert(m_device != nullptr);
     
-    m_device->setSampleRate(SOAPY_SDR_RX, 0, m_sampleRate);
-    m_device->setSampleRate(SOAPY_SDR_TX, 0, m_sampleRate);
+        m_device->setSampleRate(SOAPY_SDR_RX, 0, m_sampleRate);
+        m_device->setSampleRate(SOAPY_SDR_TX, 0, m_sampleRate);
     
-    m_device->setFrequency(SOAPY_SDR_RX, 0, m_soapyRXFreq);
-    m_device->setFrequency(SOAPY_SDR_TX, 0, m_soapyTXFreq);
+        m_device->setFrequency(SOAPY_SDR_RX, 0, m_soapyRXFreq);
+        m_device->setFrequency(SOAPY_SDR_TX, 0, m_soapyTXFreq);
     
-    m_device->setAntenna(SOAPY_SDR_RX, 0, m_rxAntenna);
-    m_device->setAntenna(SOAPY_SDR_TX, 0, m_txAntenna);
+        m_device->setAntenna(SOAPY_SDR_RX, 0, m_rxAntenna);
+        m_device->setAntenna(SOAPY_SDR_TX, 0, m_txAntenna);
 
-    // Device TX calibration routine requires normal gains for RF loopback
-    m_device->setGain(SOAPY_SDR_RX, 0, m_soapyRXGain);
-    m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
+        // Device TX calibration routine requires normal gains for RF loopback
+        m_device->setGain(SOAPY_SDR_RX, 0, m_soapyRXGain);
+        m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
 
-    m_device->setBandwidth(SOAPY_SDR_RX, 0, m_sampleRate);
-    m_device->setBandwidth(SOAPY_SDR_TX, 0, m_sampleRate);
+        m_device->setBandwidth(SOAPY_SDR_RX, 0, m_sampleRate);
+        m_device->setBandwidth(SOAPY_SDR_TX, 0, m_sampleRate);
 
+        m_rxStream = m_device->setupStream(SOAPY_SDR_RX, "CF32", {0}, rxArgs);
+        m_txStream = m_device->setupStream(SOAPY_SDR_TX, "CF32", {0}, txArgs);
 
-    m_rxStream = m_device->setupStream(SOAPY_SDR_RX, "CF32", {0}, rxArgs);
-    m_txStream = m_device->setupStream(SOAPY_SDR_TX, "CF32", {0}, txArgs);
-    m_device->activateStream(m_txStream);
-    m_device->activateStream(m_rxStream);
+        m_device->activateStream(m_txStream);
+        m_device->activateStream(m_rxStream);
     
-    assert(m_rxStream != nullptr);
-    assert(m_txStream != nullptr);
+        assert(m_rxStream != nullptr);
+        assert(m_txStream != nullptr);
 
-    m_rxMTU = m_device->getStreamMTU(m_rxStream);
-    m_txMTU = m_device->getStreamMTU(m_txStream);
+        m_rxMTU = m_device->getStreamMTU(m_rxStream);
+        m_txMTU = m_device->getStreamMTU(m_txStream);
 
-    SoapySDR::Range txGainRange = m_device->getGainRange(SOAPY_SDR_TX, 0);
-    SoapySDR::Range rxGainRange = m_device->getGainRange(SOAPY_SDR_RX, 0);
-    m_minTxGain = (float)txGainRange.minimum() + (float)txGainRange.step();
+        SoapySDR::Range txGainRange = m_device->getGainRange(SOAPY_SDR_TX, 0);
+        SoapySDR::Range rxGainRange = m_device->getGainRange(SOAPY_SDR_RX, 0);
+        m_minTxGain = (float)txGainRange.minimum() + (float)txGainRange.step();
 
-    ::fprintf(stdout, "Soapy device initialized\n");
-    ::fprintf(stdout, "  RX stream MTU is %d\n", m_rxMTU);
-    ::fprintf(stdout, "  TX stream MTU is %d\n", m_txMTU);
-    ::fprintf(stdout, "  Minimum TX gain: %f dB\n", txGainRange.minimum());
-    ::fprintf(stdout, "  Maximum TX gain: %f dB\n", txGainRange.maximum());
-    ::fprintf(stdout, "  Minimum RX gain: %f dB\n", rxGainRange.minimum());
-    ::fprintf(stdout, "  Maximum RX gain: %f dB\n", rxGainRange.maximum());
-    m_soapyInit = true;
-  } catch (std::runtime_error &e) {
-    ::fprintf(stderr, "Soapy device failed to initialize\n");
-  }
+        ::LogMessage("Soapy device initialized");
+        ::LogMessage("  RX stream MTU is %d", m_rxMTU);
+        ::LogMessage("  TX stream MTU is %d", m_txMTU);
+        ::LogMessage("  Minimum TX gain: %f dB", txGainRange.minimum());
+        ::LogMessage("  Maximum TX gain: %f dB", txGainRange.maximum());
+        ::LogMessage("  Minimum RX gain: %f dB", rxGainRange.minimum());
+        ::LogMessage("  Maximum RX gain: %f dB", rxGainRange.maximum());
+        m_soapyInit = true;
+    } catch (std::runtime_error& e) {
+        ::LogError("Soapy device failed to initialize");
+    }
 }
 
 Device::~Device()
 {
-  if (m_device != nullptr) {
-    assert(m_rxStream != nullptr);
-    assert(m_txStream != nullptr);
+    if (m_device != nullptr) {
+        assert(m_rxStream != nullptr);
+        assert(m_txStream != nullptr);
     
-    if (m_soapyInit) {
-      m_device->deactivateStream(m_rxStream, 0, 0);
-      m_device->deactivateStream(m_txStream, 0, 0);
+        if (m_soapyInit) {
+            m_device->deactivateStream(m_rxStream, 0, 0);
+            m_device->deactivateStream(m_txStream, 0, 0);
+        }
+    
+        m_device->closeStream(m_rxStream);
+        m_device->closeStream(m_txStream);
+    
+        SoapySDR::Device::unmake(m_device);
     }
-    
-    m_device->closeStream(m_rxStream);
-    m_device->closeStream(m_txStream);
-    
-    SoapySDR::Device::unmake(m_device);
-  }
-  ::fprintf(stderr, "Soapy device closed\n");
-  m_rxStream = nullptr;
-  m_txStream = nullptr;
-  m_device   = nullptr;
+
+    ::LogMessage("Soapy device closed");
+
+    m_rxStream = nullptr;
+    m_txStream = nullptr;
+    m_device   = nullptr;
 }
 
 bool Device::getSoapyInit() const
 {
-  return m_soapyInit;
+    return m_soapyInit;
 }
 
 SoapySDR::Device* Device::getDevice()
 {
-  return m_device;
+    return m_device;
 }
 
 unsigned int Device::getRxMTU() const
 {
-  return m_rxMTU;
+    return m_rxMTU;
 }
 
 unsigned int Device::getTxMTU() const
 {
-  return m_txMTU;
+    return m_txMTU;
 }
 
 void Device::setTx(bool tx)
 {
-  // TODO: SX handling
-  if(tx)
-    m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
-  else
-    m_device->setGain(SOAPY_SDR_TX, 0, m_minTxGain);
+    // TODO: SX handling
+    if (tx)
+        m_device->setGain(SOAPY_SDR_TX, 0, m_soapyTXGain);
+    else
+        m_device->setGain(SOAPY_SDR_TX, 0, m_minTxGain);
 
-  // poke GPIO/relay code here
+    // poke GPIO/relay code here
 }
-

@@ -24,7 +24,6 @@
 #include <SoapySDR/Logger.hpp>
 #include "Constants.h"
 
-
 class Device
 {
 public:
@@ -33,20 +32,26 @@ public:
            float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
            unsigned int num_pfb_channels, bool debug);
     ~Device();
+
     SoapySDR::Stream* getTxStream() { return m_txStream;};
     SoapySDR::Stream* getRxStream() { return m_rxStream;};
     SoapySDR::Device* getDevice();
-    bool getSoapyInit() const;
+
+    bool         getSoapyInit() const;
+
     unsigned int getRxMTU() const;
     unsigned int getTxMTU() const;
-    void setTx(bool tx);
+
+    void         setTx(bool tx);
     
 private:
     std::string          m_soapyDeviceType;
     std::string          m_soapyDeviceURI;
+
     SoapySDR::Device*    m_device;
     SoapySDR::Stream*    m_rxStream;
     SoapySDR::Stream*    m_txStream;
+
     double               m_sampleRate;
     float                m_soapyTXFreq;
     float                m_soapyRXFreq;
@@ -54,11 +59,12 @@ private:
     float                m_soapyRXGain;
     std::string          m_rxAntenna;
     std::string          m_txAntenna;
+
     bool                 m_soapyInit;
+
     unsigned int         m_rxMTU;
     unsigned int         m_txMTU;
     float                m_minTxGain;
-
 };
 
 #endif // DEVICE_H

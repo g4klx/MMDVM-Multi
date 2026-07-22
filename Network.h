@@ -30,7 +30,6 @@
 class Network
 {
 public:
-
     Network(const std::string& modemAddress, unsigned int modemStartPort,
             const std::string& localAddress, unsigned int localStartPort,
             unsigned int numChannels);
@@ -50,7 +49,6 @@ private:
     sockaddr_storage m_addr[MAX_MMDVM_CHANNELS];
     unsigned int     m_addrLen[MAX_MMDVM_CHANNELS];
     bool             m_init;
-
 };
 
 #endif // NETWORK_H

@@ -34,7 +34,7 @@ public:
     void channelize(std::complex<float>* in_samples, std::complex<float>* out_samples);
 
 private:
-    unsigned int m_channels;
+    unsigned int  m_channels;
     firpfbch_crcf m_synthesizer;
     firpfbch_crcf m_analyzer;
 };

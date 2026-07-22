@@ -17,7 +17,10 @@
  */
 
 #include "Receiver.h"
+#include "Thread.h"
+#include "Log.h"
 
+#include <cassert>
 
 Receiver::Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
                    Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
@@ -38,18 +41,19 @@ m_powerCalibration(power_calibration),
 m_symbolDeviation(symbol_deviation),
 m_readTime(0LL)
 {
-  assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
-  assert(m_pfbChannels > 1U);
-  assert(m_pfbChannels <= MAX_PFB_CHANNELS);
-  for(unsigned i = 0;i < m_activeChannels;i++)
-  {
-    m_sampleBuf[i].reserve(SAMPLES_PER_SLOT);
-    m_controlBuf[i].reserve(SAMPLES_PER_SLOT);
-    m_RSSI[i] = 1024U;
-  }
-  unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
-  max_real_chan = std::min<unsigned int>(max_real_chan, 4U); // FIXME: flexible number of channels
-  m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
+    assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
+    assert(m_pfbChannels > 1U);
+    assert(m_pfbChannels <= MAX_PFB_CHANNELS);
+
+    for (unsigned int i = 0U;i < m_activeChannels;i++) {
+        m_sampleBuf[i].reserve(SAMPLES_PER_SLOT);
+        m_controlBuf[i].reserve(SAMPLES_PER_SLOT);
+        m_RSSI[i] = 1024U;
+    }
+
+    unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
+    max_real_chan = std::min<unsigned int>(max_real_chan, 4U); // FIXME: flexible number of channels
+    m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
 }
 
 Receiver::~Receiver()
@@ -58,157 +62,150 @@ Receiver::~Receiver()
 
 void Receiver::start()
 {
-  m_thread = std::thread(&Receiver::run, this);
-  m_thread.detach();
+    m_thread = std::thread(&Receiver::run, this);
+    m_thread.detach();
 }
 
 void Receiver::stop()
 {
-  m_running = false;
+    m_running = false;
 }
 
 bool Receiver::stopped() const
 {
-  return m_stopped;
+    return m_stopped;
 }
 
 void Receiver::run()
 {
-  while(m_running)
-  {
-    std::complex<float> read_buffer[RX_SAMP_IN_SIZE];
-    void *buffs[1] = {(void*)read_buffer};
-    long long timeNs = 0LL;
+    while (m_running) {
+        std::complex<float> read_buffer[RX_SAMP_IN_SIZE];
+        void *buffs[1] = {(void*)read_buffer};
+        long long timeNs = 0LL;
     
-    int flags = 0;
-    int ret = m_device->getDevice()->readStream(m_device->getRxStream(), buffs, RX_INTERP_IN_SIZE * m_pfbChannels, flags, timeNs);
-    if (ret <= 0)
-    {
-      ::fprintf(stderr, "Error reading samples from device: %s\n", SoapySDR_errToStr(ret));
-      std::this_thread::sleep_for(std::chrono::milliseconds(3));
-      continue;
-    }
-
-    if((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels)
-    {
-      ::fprintf(stderr, "Underrun occurred while reading samples from device, only read %d samples!\n", ret);
-      std::this_thread::sleep_for(std::chrono::milliseconds(3));
-      continue;
-    }
-
-    if(!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
-      timeNs = m_readTime;
-
-    std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0f, 0.0f};
-    m_rotator->derotate(read_buffer, RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
-
-    std::complex<float> channelized1[RX_INTERP_IN_SIZE][MAX_PFB_CHANNELS] = {{0.0f, 0.0f}};
-    std::complex<float> channelized2[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0f, 0.0f}};
-    std::complex<float> rearranged[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0f, 0.0f}};
-    for(unsigned i=0;i<RX_INTERP_IN_SIZE;i++)
-    {
-      m_channelizer->channelize(&rotated[i*m_pfbChannels], &channelized1[i][0]);
-    }
-
-    for(unsigned i=0;i<m_pfbChannels;i++)
-    {
-      for(unsigned j=0;j<RX_INTERP_IN_SIZE;j++)
-      {
-        channelized2[i][j] = channelized1[j][i];
-      }
-    }
-
-    // First four usable channels are on the real side of the FFT, the rest in imag,
-    // reversed order to minimize occupied BW for 250k sps
-    // Channel 5 (6?) of the PFB wraps around to the imag side and is not usable
-    for (unsigned k=0; k<m_fillReal; k++)
-    {
-      for(unsigned j=0;j<RX_INTERP_IN_SIZE;j++)
-      {
-        rearranged[k][j] = channelized2[k][j];
-      }
-    }
-    for (unsigned m=m_pfbChannels-1, p=m_fillReal; p<m_activeChannels; m--,p++)
-    {
-      for(unsigned j=0;j<RX_INTERP_IN_SIZE;j++)
-      {
-        rearranged[p][j] = channelized2[m][j];
-      }
-    }
-
-    m_burstTimer->lock();
-    for(unsigned int j=0;j<m_activeChannels;j++)
-    {
-      m_burstTimer->setTimer(timeNs, j);
-      float output_samples[RX_SAMP_OUT_SIZE] = { 0.0f };
-      processSamples(j, rearranged[j], output_samples);
-      for(unsigned int i=0;i<RX_SAMP_OUT_SIZE;i++)
-      {
-        uint8_t control = MARK_NONE;
-        uint8_t slot_no = m_burstTimer->checkTime(j, i==0);
-        if(slot_no == 1)
-          control = MARK_SLOT1;
-        if(slot_no == 2)
-          control = MARK_SLOT2;
-        int32_t s = int32_t(32767.0f * output_samples[i] / m_symbolDeviation);
-        s = (s > 32767) ? 32767 : s;
-        s = (s < -32767) ? -32767 : s;
-        int16_t sample = int16_t(s);
-        m_sampleBuf[j].push_back(sample);
-        m_controlBuf[j].push_back(control);
-      }
-    }
-    m_burstTimer->unlock();
-
-    // simulate a timestamp
-    if(!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
-      m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() /
-                    (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
-
-    for(unsigned int j=0;j<m_activeChannels;j++)
-    {
-      uint32_t num_items = SAMPLES_PER_SLOT;
-      if(m_sampleBuf[j].size() >= SAMPLES_PER_SLOT)
-      {
-        if(m_burstTimer->getInit(j))
-        {
-          unsigned int rssi = m_RSSI[j];
-          unsigned char reply[NETWORK_TX_PACKET_SIZE];
-          ::memcpy(reply, &num_items, sizeof(uint32_t));
-          ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
-          ::memcpy(reply + 2U * sizeof(uint32_t),
-                    (unsigned char*)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
-          ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t),
-                  (unsigned char*)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
-          m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
+        int flags = 0;
+        int ret = m_device->getDevice()->readStream(m_device->getRxStream(), buffs, RX_INTERP_IN_SIZE * m_pfbChannels, flags, timeNs);
+        if (ret <= 0) {
+            ::LogError("Error reading samples from device: %s", SoapySDR_errToStr(ret));
+            CThread::sleep(3U);
+            continue;
         }
-        m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);
-        m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
-        m_sampleBuf[j].reserve(SAMPLES_PER_SLOT);
-        m_controlBuf[j].reserve(SAMPLES_PER_SLOT);
-        m_RSSI[j] = 1024U;
-      }
+
+        if ((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels) {
+            ::LogError("Underrun occurred while reading samples from device, only read %d samples!", ret);
+            CThread::sleep(3U);
+            continue;
+        }
+
+        if (!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
+            timeNs = m_readTime;
+
+        std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0F, 0.0F};
+        m_rotator->derotate(read_buffer, RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
+
+        std::complex<float> channelized1[RX_INTERP_IN_SIZE][MAX_PFB_CHANNELS] = {{0.0F, 0.0F}};
+        std::complex<float> channelized2[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0F, 0.0F}};
+        std::complex<float> rearranged[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE]   = {{0.0F, 0.0F}};
+
+        for (unsigned int i = 0U; i < RX_INTERP_IN_SIZE; i++)
+            m_channelizer->channelize(&rotated[i*m_pfbChannels], &channelized1[i][0]);
+
+        for (unsigned int i = 0U; i < m_pfbChannels; i++) {
+            for (unsigned int j = 0U; j < RX_INTERP_IN_SIZE; j++)
+                channelized2[i][j] = channelized1[j][i];
+        }
+
+        // First four usable channels are on the real side of the FFT, the rest in imag,
+        // reversed order to minimize occupied BW for 250k sps
+        // Channel 5 (6?) of the PFB wraps around to the imag side and is not usable
+        for (unsigned int k = 0U; k < m_fillReal; k++) {
+            for (unsigned int j = 0U; j < RX_INTERP_IN_SIZE; j++)
+                rearranged[k][j] = channelized2[k][j];
+        }
+
+        for (unsigned int m = m_pfbChannels - 1U, p = m_fillReal; p < m_activeChannels; m--, p++) {
+            for (unsigned int j = 0U; j < RX_INTERP_IN_SIZE; j++)
+                rearranged[p][j] = channelized2[m][j];
+        }
+
+        m_burstTimer->lock();
+        for (unsigned int j = 0U; j < m_activeChannels; j++) {
+            m_burstTimer->setTimer(timeNs, j);
+
+            float output_samples[RX_SAMP_OUT_SIZE] = { 0.0f };
+            processSamples(j, rearranged[j], output_samples);
+
+            for (unsigned int i = 0U; i < RX_SAMP_OUT_SIZE; i++) {
+                uint8_t control = MARK_NONE;
+                uint8_t slot_no = m_burstTimer->checkTime(j, i==0);
+
+                if (slot_no == 1U)
+                    control = MARK_SLOT1;
+                else if (slot_no == 2U)
+                    control = MARK_SLOT2;
+
+                int32_t s = int32_t(32767.0F * output_samples[i] / m_symbolDeviation);
+                s = (s > 32767) ? 32767 : s;
+                s = (s < -32767) ? -32767 : s;
+
+                int16_t sample = int16_t(s);
+                m_sampleBuf[j].push_back(sample);
+                m_controlBuf[j].push_back(control);
+            }
+        }
+    
+        m_burstTimer->unlock();
+
+        // Simulate a timestamp
+        if (!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
+            m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() /
+                          (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
+
+        for (unsigned int j = 0U; j < m_activeChannels; j++) {
+            uint32_t num_items = SAMPLES_PER_SLOT;
+            if (m_sampleBuf[j].size() >= SAMPLES_PER_SLOT) {
+                if (m_burstTimer->getInit(j)) {
+                    unsigned int rssi = m_RSSI[j];
+                    unsigned char reply[NETWORK_TX_PACKET_SIZE];
+                    ::memcpy(reply, &num_items, sizeof(uint32_t));
+                    ::memcpy(reply + sizeof(uint32_t), &rssi, sizeof(uint32_t));
+                    ::memcpy(reply + 2U * sizeof(uint32_t), (unsigned char*)m_controlBuf[j].data(), num_items * sizeof(uint8_t));
+                    ::memcpy(reply + 2U * sizeof(uint32_t) + num_items * sizeof(uint8_t), (unsigned char*)m_sampleBuf[j].data(), num_items*sizeof(int16_t));
+                    m_network->write(reply, NETWORK_TX_PACKET_SIZE, j);
+                }
+
+                m_sampleBuf[j].erase(m_sampleBuf[j].begin(), m_sampleBuf[j].begin() + num_items);
+                m_controlBuf[j].erase(m_controlBuf[j].begin(), m_controlBuf[j].begin() + num_items);
+                m_sampleBuf[j].reserve(SAMPLES_PER_SLOT);
+                m_controlBuf[j].reserve(SAMPLES_PER_SLOT);
+                m_RSSI[j] = 1024U;
+            }
+        }
     }
-  }
-  m_stopped = true;
+
+    m_stopped = true;
 }
 
 void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samples, float* output_samples)
 {
-  std::complex<float> resampled[RX_SAMP_OUT_SIZE] = {0.0f, 0.0f};
-  m_resampler->downsample(channel, in_samples, RX_INTERP_IN_SIZE, resampled);
-  float sum = 0.0f;
-  for(unsigned i=0;i<RX_SAMP_OUT_SIZE;i++)
-  {
-    sum += std::norm(resampled[i]);
-  }
-  float rms = std::sqrtf(((sum + 1.0e-20f) / float(RX_SAMP_OUT_SIZE)) / 2.0f);
-  float pow = (rms * rms) / 50.0f;
-  float dbFS = 10.0f * std::log10f(pow + 1.0e-20f);
-  unsigned int rssi = (unsigned int)std::fabs(dbFS) + m_powerCalibration; // invert to positive, RSSI > 0 dBFs is unlikely
-  if(rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive
-    m_RSSI[channel] = rssi;
-  m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
+    assert(channel < m_activeChannels);
+    assert(in_samples != nullptr);
+    assert(output_samples != nullptr);
+
+    std::complex<float> resampled[RX_SAMP_OUT_SIZE] = {0.0F, 0.0F};
+    m_resampler->downsample(channel, in_samples, RX_INTERP_IN_SIZE, resampled);
+
+    float sum = 0.0F;
+    for (unsigned int i = 0U; i < RX_SAMP_OUT_SIZE; i++)
+        sum += std::norm(resampled[i]);
+
+    float rms  = std::sqrtf(((sum + 1.0E-20F) / float(RX_SAMP_OUT_SIZE)) / 2.0F);
+    float pow  = (rms * rms) / 50.0F;
+    float dbFS = 10.0F * std::log10f(pow + 1.0E-20F);
+
+    unsigned int rssi = (unsigned int)std::fabs(dbFS) + m_powerCalibration; // invert to positive, RSSI > 0 dBFs is unlikely
+    if (rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive
+        m_RSSI[channel] = rssi;
+
+    m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
 }
-
-

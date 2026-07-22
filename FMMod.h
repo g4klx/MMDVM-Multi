@@ -24,19 +24,20 @@
 #include <liquid/liquid.h>
 #include "Constants.h"
 
-
 class FMMod
 {
 public:
     FMMod(float deviation, unsigned int num_channels);
     ~FMMod();
+
     void modulate(unsigned int channel, float* in_samples, const unsigned int num_samples, std::complex<float>* out_samples);
     void demodulate(unsigned int channel, std::complex<float>* in_samples, const unsigned int num_samples,float* out_samples);
     
 private:
     unsigned int m_activeChannels;
-    freqmod m_FMmod[MAX_MMDVM_CHANNELS];
-    freqdem m_FMdemod[MAX_MMDVM_CHANNELS];
+
+    freqmod      m_FMmod[MAX_MMDVM_CHANNELS];
+    freqdem      m_FMdemod[MAX_MMDVM_CHANNELS];
 };
 
 #endif // FMMOD_H
