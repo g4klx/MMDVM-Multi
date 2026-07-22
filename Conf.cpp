@@ -75,8 +75,9 @@ m_svxBridgeSVXAddress("127.0.0.1"),
 m_svxBridgeSVXPort(4937U),
 m_svxBridgeLocalSVXAddress("127.0.0.1"),
 m_svxBridgeLocalSVXPort(4938U),
-m_svxBridgeRxGain(750),
-m_svxBridgeTxGain(14)
+m_svxBridgeRxGain(1000),
+m_svxBridgeTxGain(10),
+m_svxBridgeSquelch(-100)
 {
 }
 
@@ -231,6 +232,8 @@ bool CConf::read()
 				m_svxBridgeRxGain = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "TxGain") == 0)
 				m_svxBridgeTxGain = (unsigned int)::atoi(value);
+			else if (::strcmp(key, "Squelch") == 0)
+				m_svxBridgeSquelch = ::atoi(value);
 			else if (::strcmp(key, "Trace") == 0)
 				m_networkTrace = ::atoi(value) == 1;
 		}
@@ -446,3 +449,9 @@ unsigned int CConf::getBridgeTxGain() const
 {
 	return m_svxBridgeTxGain;
 }
+
+int CConf::getBridgeSquelch() const
+{
+  return m_svxBridgeSquelch;
+}
+

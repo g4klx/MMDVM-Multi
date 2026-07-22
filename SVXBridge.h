@@ -24,6 +24,7 @@
 #include <fcntl.h>
 #include <pwd.h>
 #include <string.h>
+#include <cmath>
 #include <csignal>
 #include <thread>
 #include <chrono>
@@ -42,8 +43,10 @@ public:
             const std::string& localModemAddress, unsigned int localModemPort,
             const std::string& svxAddress, unsigned int svxPort,
             const std::string& localSVXAddress, unsigned int localSVXPort,
-            unsigned int interp, unsigned int decim, unsigned int rxGain, unsigned int txGain);
-    ~SVXBridge();
+            unsigned int interp, unsigned int decim, unsigned int rxGain,
+            unsigned int txGain, unsigned int modemSquelch);
+
+  ~SVXBridge();
 
     void runBridge();
     void processSVXLink();
@@ -63,7 +66,8 @@ public:
     void downsample(float* in_samples, unsigned int num_samples, float* out_samples);
     
 private:
-  bool             m_init;
+  bool m_init;
+  bool m_rx;
   CUDPSocket       m_sockSVX;
   CUDPSocket       m_sockModem;
   sockaddr_storage m_addrSVX;
@@ -75,6 +79,7 @@ private:
   unsigned int m_interp;
   unsigned int m_rxGain;
   unsigned int m_txGain;
+  unsigned int m_modemSquelch;
   unsigned int m_netTimeout;
 
   rresamp_rrrf m_upsampler;
