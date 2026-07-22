@@ -135,7 +135,6 @@
     <ClInclude Include="Receiver.h" />
     <ClInclude Include="Resampler.h" />
     <ClInclude Include="Rotator.h" />
-    <ClInclude Include="SVXBridge.h" />
     <ClInclude Include="Thread.h" />
     <ClInclude Include="Transmitter.h" />
     <ClInclude Include="UDPSocket.h" />
@@ -154,7 +153,6 @@
     <ClCompile Include="Receiver.cpp" />
     <ClCompile Include="Resampler.cpp" />
     <ClCompile Include="Rotator.cpp" />
-    <ClCompile Include="SVXBridge.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="Transmitter.cpp" />
     <ClCompile Include="UDPSocket.cpp" />

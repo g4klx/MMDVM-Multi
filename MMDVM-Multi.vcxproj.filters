@@ -41,9 +41,6 @@
     <ClInclude Include="Rotator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SVXBridge.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Transmitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -89,9 +86,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Rotator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SVXBridge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Transmitter.cpp">
