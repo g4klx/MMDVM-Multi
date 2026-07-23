@@ -43,7 +43,7 @@ public:
                 Channelizer* channelizer, DMRTiming* burst_timer,
                 unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
                 float dac_scaling, float symbol_deviation);
-    ~Transmitter();
+    virtual ~Transmitter();
 
     virtual void entry();
 

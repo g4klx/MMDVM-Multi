@@ -40,7 +40,7 @@ public:
     Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
              Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
              unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp);
-    ~Receiver();
+    virtual ~Receiver();
 
     virtual void entry();
 
