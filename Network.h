@@ -20,12 +20,11 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
-#include <string>
-#include <mutex>
-#include <string.h>
 #include "UDPSocket.h"
 #include "Constants.h"
 
+#include <string>
+#include <cstring>
 
 class Network
 {

@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2015,2016,2025 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,29 +16,50 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#include "Mutex.h"
 
-#include <liquid/liquid.h>
-#include "Constants.h"
+#if defined(_WIN32) || defined(_WIN64)
 
-#include <complex>
-#include <cstring>
-
-class Rotator
+CMutex::CMutex() :
+m_handle()
 {
-public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
+	m_handle = ::CreateMutex(nullptr, FALSE, nullptr);
+}
 
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
+CMutex::~CMutex()
+{
+	::CloseHandle(m_handle);
+}
 
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
-private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
+void CMutex::lock()
+{
+	::WaitForSingleObject(m_handle, INFINITE);
+}
 
-};
+void CMutex::unlock()
+{
+	::ReleaseMutex(m_handle);
+}
 
-#endif // ROTATOR_H
+#else
+
+CMutex::CMutex() :
+m_mutex(PTHREAD_MUTEX_INITIALIZER)
+{
+}
+
+CMutex::~CMutex()
+{
+}
+
+void CMutex::lock()
+{
+	::pthread_mutex_lock(&m_mutex);
+}
+
+void CMutex::unlock()
+{
+	::pthread_mutex_unlock(&m_mutex);
+}
+
+#endif

@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
+ *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,29 +16,30 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef ROTATOR_H
-#define ROTATOR_H
+#if !defined(MUTEX_H)
+#define	MUTEX_H
 
-#include <liquid/liquid.h>
-#include "Constants.h"
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
-#include <complex>
-#include <cstring>
-
-class Rotator
+class CMutex
 {
 public:
-    Rotator(float rotation_hz=12000.0f, float sample_rate=250000.0f);
-    ~Rotator();
+	CMutex();
+	~CMutex();
 
-    void rotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
+	void lock();
+	void unlock();
 
-    void derotate(std::complex<float>* in_samples, unsigned int num_samples, std::complex<float>* out_samples);
-    
 private:
-    nco_crcf m_ncoD;
-    nco_crcf m_ncoU;
-
+#if defined(_WIN32) || defined(_WIN64)
+	HANDLE          m_handle;
+#else
+	pthread_mutex_t m_mutex;
+#endif
 };
 
-#endif // ROTATOR_H
+#endif

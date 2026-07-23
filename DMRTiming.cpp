@@ -29,7 +29,15 @@ DMRTimeSlot::~DMRTimeSlot()
 {
 }
 
-DMRTiming::DMRTiming(unsigned int rf_delay, int sample_delay)
+DMRTiming::DMRTiming(unsigned int rf_delay, int sample_delay) :
+m_timingMutex(),
+m_sampleDelay(0LL),
+m_RFDelay(0LL),
+m_timingInitialized(),
+m_sampleCounter(),
+m_lastSlot(),
+m_timeBase(),
+m_timeSlots()
 {
     m_RFDelay = (long long)rf_delay * 1000000LL;
 

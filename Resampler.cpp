@@ -16,8 +16,9 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <assert.h>
 #include "Resampler.h"
+
+#include <cassert>
 
 Resampler::Resampler(unsigned int interp, unsigned int decim, float bw, unsigned int num_channels) :
 m_decim(decim),

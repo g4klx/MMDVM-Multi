@@ -19,11 +19,12 @@
 #ifndef DMRTIMING_H
 #define DMRTIMING_H
 
-#include <mutex>
+#include "Constants.h"
+#include "Mutex.h"
+
 #include <cstdint>
 #include <vector>
-#include <assert.h>
-#include "Constants.h"
+#include <cassert>
 
 class DMRTimeSlot {
 public:
@@ -50,7 +51,7 @@ public:
     long long allocateSlot(uint8_t slot_no, int64_t& next_slot_timing_correction, unsigned int cn = 0U);
 
 private:
-    std::mutex m_timingMutex;
+    CMutex    m_timingMutex;
 
     long long m_sampleDelay;
     long long m_RFDelay;

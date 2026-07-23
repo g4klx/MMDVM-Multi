@@ -131,6 +131,7 @@
     <ClInclude Include="FMMod.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="MQTTConnection.h" />
+    <ClInclude Include="Mutex.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="Receiver.h" />
     <ClInclude Include="Resampler.h" />
@@ -149,6 +150,7 @@
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="MMDVM-Multi.cpp" />
     <ClCompile Include="MQTTConnection.cpp" />
+    <ClCompile Include="Mutex.cpp" />
     <ClCompile Include="Network.cpp" />
     <ClCompile Include="Receiver.cpp" />
     <ClCompile Include="Resampler.cpp" />

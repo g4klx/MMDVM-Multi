@@ -114,9 +114,9 @@ TXLevel=83
 
 ```
 $ cd MMDVM-Host/
-$ ./MMDVM-Host MMDVMHost1.ini
-$ ./MMDVM-Host MMDVMHost2.ini
-$ ./MMDVM-Host MMDVMHost3.ini
+$ ./MMDVM-Host MMDVM-Host-1.ini
+$ ./MMDVM-Host MMDVM-Host-2.ini
+$ ./MMDVM-Host MMDVM-Host-3.ini
 ...etc
 ```
 
