@@ -1,7 +1,7 @@
 #
 CXX      = c++
-CXXFLAGS += -g -O3 -Wall -std=c++11 -fpermissive -MMD -MD -pthread -Wno-narrowing -Wno-strict-aliasing
-LIBS     += -lpthread -lmosquitto -lSoapySDR
+CXXFLAGS += -g -O3 -Wall -Wextra -Wpedantic -std=gnu++17 -fpermissive -MMD -MD -pthread -D_LIBCPP_COMPLEX
+LIBS     += -lpthread -lmosquitto -lSoapySDR -lliquid
 LDFLAGS  += -g -L/usr/local/lib
 
 CXXSRCS = $(wildcard *.cpp)

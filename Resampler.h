@@ -19,10 +19,10 @@
 #ifndef RESAMPLER_H
 #define RESAMPLER_H
 
+#include <complex>
 #include <liquid/liquid.h>
 #include "Constants.h"
 
-#include <complex>
 #include <cstring>
 
 class Resampler

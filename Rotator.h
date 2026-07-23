@@ -19,10 +19,10 @@
 #ifndef ROTATOR_H
 #define ROTATOR_H
 
+#include <complex>
 #include <liquid/liquid.h>
 #include "Constants.h"
 
-#include <complex>
 #include <cstring>
 
 class Rotator
