@@ -36,7 +36,6 @@ bool CThread::run()
 	return m_handle != nullptr;
 }
 
-
 void CThread::wait()
 {
 	::WaitForSingleObject(m_handle, INFINITE);
@@ -91,12 +90,10 @@ bool CThread::run()
 	return ::pthread_create(&m_thread, nullptr, helper, this) == 0;
 }
 
-
 void CThread::wait()
 {
 	::pthread_join(m_thread, nullptr);
 }
-
 
 void* CThread::helper(void* arg)
 {

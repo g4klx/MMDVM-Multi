@@ -19,13 +19,6 @@
 #ifndef TRANSMITTER_H
 #define TRANSMITTER_H
 
-#include <complex>
-#include <cmath>
-#include <chrono>
-#include <string>
-#include <thread>
-#include <vector>
-#include <cstdint>
 #include <SoapySDR/Device.hpp>
 #include "Network.h"
 #include "Device.h"
@@ -35,9 +28,15 @@
 #include "Resampler.h"
 #include "Rotator.h"
 #include "Channelizer.h"
+#include "Thread.h"
 
+#include <complex>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <cstdint>
 
-class Transmitter
+class Transmitter : public CThread
 {
 public:
     Transmitter(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
@@ -46,8 +45,8 @@ public:
                 float dac_scaling, float symbol_deviation);
     ~Transmitter();
 
-    void start();
-    void run();
+    virtual void entry();
+
     void stop();
     bool stopped() const;
 
@@ -78,7 +77,6 @@ private:
     Rotator*     m_rotator;
     Channelizer* m_channelizer;
     DMRTiming*   m_burstTimer;
-    std::thread  m_thread;
 
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<float>   m_sampleBuf[MAX_MMDVM_CHANNELS];

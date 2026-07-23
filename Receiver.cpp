@@ -60,15 +60,11 @@ Receiver::~Receiver()
 {
 }
 
-void Receiver::start()
-{
-    m_thread = std::thread(&Receiver::run, this);
-    m_thread.detach();
-}
-
 void Receiver::stop()
 {
     m_running = false;
+
+    wait();
 }
 
 bool Receiver::stopped() const
@@ -76,7 +72,7 @@ bool Receiver::stopped() const
     return m_stopped;
 }
 
-void Receiver::run()
+void Receiver::entry()
 {
     while (m_running) {
         std::complex<float> read_buffer[RX_SAMP_IN_SIZE];

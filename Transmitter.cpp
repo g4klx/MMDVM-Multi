@@ -60,16 +60,11 @@ Transmitter::~Transmitter()
 {
 }
 
-void Transmitter::start()
-{
-    m_thread = std::thread(&Transmitter::run, this);
-    m_thread.detach();
-}
-
-
 void Transmitter::stop()
 {
     m_running = false;
+
+    wait();
 }
 
 bool Transmitter::stopped() const
@@ -113,7 +108,7 @@ void Transmitter::readNetwork()
     }
 }
 
-void Transmitter::run()
+void Transmitter::entry()
 {
     while(m_running) {
         long long timeNs = 0LL;

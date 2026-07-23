@@ -19,11 +19,6 @@
 #ifndef RECEIVER_H
 #define RECEIVER_H
 
-#include <thread>
-#include <chrono>
-#include <cmath>
-#include <string>
-#include <cstdint>
 #include <SoapySDR/Device.hpp>
 #include "Network.h"
 #include "Device.h"
@@ -33,9 +28,13 @@
 #include "Resampler.h"
 #include "Rotator.h"
 #include "Channelizer.h"
+#include "Thread.h"
 
+#include <cmath>
+#include <string>
+#include <cstdint>
 
-class Receiver
+class Receiver : public CThread
 {
 public:
     Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
@@ -43,8 +42,8 @@ public:
              unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp);
     ~Receiver();
 
-    void start();
-    void run();
+    virtual void entry();
+
     void stop();
     bool stopped() const;
     
@@ -65,7 +64,6 @@ private:
     unsigned int m_powerCalibration;
     float m_symbolDeviation;
     long long m_readTime;
-    std::thread m_thread;
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];
     std::vector<int16_t> m_sampleBuf[MAX_MMDVM_CHANNELS];
     unsigned int m_RSSI[MAX_MMDVM_CHANNELS];

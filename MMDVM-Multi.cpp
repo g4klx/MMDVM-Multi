@@ -235,8 +235,8 @@ int main(int argc, char** argv)
     Transmitter* tx = new Transmitter(network, device, fm_mod, resampler, rotator, channelizer,
                                       timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling, symbol_deviation);
 
-    rx->start();
-    tx->start();
+    rx->run();
+    tx->run();
     running = true;
 
     std::signal(SIGINT,  signal_handler);
