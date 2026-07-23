@@ -83,13 +83,13 @@ void Receiver::entry()
         int ret = m_device->getDevice()->readStream(m_device->getRxStream(), buffs, RX_INTERP_IN_SIZE * m_pfbChannels, flags, timeNs);
         if (ret <= 0) {
             ::LogError("Error reading samples from device: %s", SoapySDR_errToStr(ret));
-            CThread::sleep(3U);
+            CThread::sleepMilli(3U);
             continue;
         }
 
         if ((unsigned int)ret != RX_INTERP_IN_SIZE * m_pfbChannels) {
             ::LogError("Underrun occurred while reading samples from device, only read %d samples!", ret);
-            CThread::sleep(3U);
+            CThread::sleepMilli(3U);
             continue;
         }
 
