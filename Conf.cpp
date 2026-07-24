@@ -30,8 +30,7 @@ enum class SECTION {
 	LOG,
 	MQTT,
 	MODEM,
-	MMDVM,
-	SVXLink
+	MMDVM
 };
 
 CConf::CConf(const std::string& file) :
@@ -66,18 +65,7 @@ m_networkModemAddress("127.0.0.1"),
 m_networkModemPort(48100U),
 m_networkLocalAddress("127.0.0.1"),
 m_networkLocalPort(48200U),
-m_networkTrace(false),
-m_svxBridgeModemAddress("127.0.0.1"),
-m_svxBridgeModemPort(48104U),
-m_svxBridgeLocalAddress("127.0.0.1"),
-m_svxBridgeLocalPort(48204U),
-m_svxBridgeSVXAddress("127.0.0.1"),
-m_svxBridgeSVXPort(4937U),
-m_svxBridgeLocalSVXAddress("127.0.0.1"),
-m_svxBridgeLocalSVXPort(4938U),
-m_svxBridgeRxGain(1000),
-m_svxBridgeTxGain(10),
-m_svxBridgeSquelch(-100)
+m_networkTrace(false)
 {
 }
 
@@ -111,8 +99,6 @@ bool CConf::read()
 				section = SECTION::MODEM;
 			else if (::strncmp(buffer, "[MMDVM]", 7U) == 0)
 				section = SECTION::MMDVM;
-			else if (::strncmp(buffer, "[SVXLink]", 9U) == 0)
-				section = SECTION::SVXLink;
 			else
 				section = SECTION::NONE;
 
@@ -209,31 +195,6 @@ bool CConf::read()
 				m_networkLocalAddress = value;
 			else if (::strcmp(key, "LocalPort") == 0)
 				m_networkLocalPort = (unsigned short)::atoi(value);
-			else if (::strcmp(key, "Trace") == 0)
-				m_networkTrace = ::atoi(value) == 1;
-		} else if (section == SECTION::SVXLink) {
-			if (::strcmp(key, "ModemAddress") == 0)
-				m_svxBridgeModemAddress = value;
-			else if (::strcmp(key, "ModemPort") == 0)
-				m_svxBridgeModemPort = (unsigned short)::atoi(value);
-			else if (::strcmp(key, "LocalAddress") == 0)
-				m_svxBridgeLocalAddress = value;
-			else if (::strcmp(key, "LocalPort") == 0)
-				m_svxBridgeLocalPort = (unsigned short)::atoi(value);
-			else if (::strcmp(key, "SVXAddress") == 0)
-				m_svxBridgeSVXAddress = value;
-			else if (::strcmp(key, "SVXPort") == 0)
-				m_svxBridgeSVXPort = (unsigned short)::atoi(value);
-			else if (::strcmp(key, "LocalSVXAddress") == 0)
-				m_svxBridgeLocalSVXAddress = value;
-			else if (::strcmp(key, "LocalSVXPort") == 0)
-				m_svxBridgeLocalSVXPort = (unsigned short)::atoi(value);
-			else if (::strcmp(key, "RxGain") == 0)
-				m_svxBridgeRxGain = (unsigned int)::atoi(value);
-			else if (::strcmp(key, "TxGain") == 0)
-				m_svxBridgeTxGain = (unsigned int)::atoi(value);
-			else if (::strcmp(key, "Squelch") == 0)
-				m_svxBridgeSquelch = ::atoi(value);
 			else if (::strcmp(key, "Trace") == 0)
 				m_networkTrace = ::atoi(value) == 1;
 		}
@@ -399,59 +360,3 @@ bool CConf::getNetworkTrace() const
 {
 	return m_networkTrace;
 }
-
-std::string CConf::getBridgeModemAddress() const
-{
-	return m_svxBridgeModemAddress;
-}
-
-unsigned short CConf::getBridgeModemPort() const
-{
-	return m_svxBridgeModemPort;
-}
-
-std::string CConf::getBridgeLocalAddress() const
-{
-	return m_svxBridgeLocalAddress;
-}
-
-unsigned short CConf::getBridgeLocalPort() const
-{
-	return m_svxBridgeLocalPort;
-}
-
-std::string CConf::getBridgeSVXAddress() const
-{
-	return m_svxBridgeSVXAddress;
-}
-
-unsigned short CConf::getBridgeSVXPort() const
-{
-	return m_svxBridgeSVXPort;
-}
-
-std::string CConf::getBridgeLocalSVXAddress() const
-{
-	return m_svxBridgeLocalSVXAddress;
-}
-
-unsigned short CConf::getBridgeLocalSVXPort() const
-{
-	return m_svxBridgeLocalSVXPort;
-}
-
-unsigned int CConf::getBridgeRxGain() const
-{
-	return m_svxBridgeRxGain;
-}
-
-unsigned int CConf::getBridgeTxGain() const
-{
-	return m_svxBridgeTxGain;
-}
-
-int CConf::getBridgeSquelch() const
-{
-  return m_svxBridgeSquelch;
-}
-

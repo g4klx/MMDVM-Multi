@@ -15,5 +15,6 @@ x64
 *.VC.db
 .vs
 .vscode
+*.kdev4
 GitVersion.h
 MMDVM-Multi
