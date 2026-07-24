@@ -195,9 +195,9 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
     for (unsigned int i = 0U; i < RX_SAMP_OUT_SIZE; i++)
         sum += std::norm(resampled[i]);
 
-    float rms  = std::sqrtf(((sum + 1.0E-20F) / float(RX_SAMP_OUT_SIZE)) / 2.0F);
+    float rms  = std::sqrt(((sum + 1.0E-20F) / float(RX_SAMP_OUT_SIZE)) / 2.0F);
     float pow  = (rms * rms) / 50.0F;
-    float dbFS = 10.0F * std::log10f(pow + 1.0E-20F);
+    float dbFS = 10.0F * std::log10(pow + 1.0E-20F);
 
     unsigned int rssi = (unsigned int)std::fabs(dbFS) + m_powerCalibration; // invert to positive, RSSI > 0 dBFs is unlikely
     if (rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive

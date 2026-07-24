@@ -1,8 +1,14 @@
 #
 CXX      = c++
-CXXFLAGS += -g -O3 -Wall -Wextra -Wpedantic -std=gnu++17 -fpermissive -MMD -MD -pthread -D_LIBCPP_COMPLEX
+CXXFLAGS += -g -O3 -Wall -Wextra -Wpedantic -std=gnu++17 -fpermissive -MMD -MD -pthread
 LIBS     += -lpthread -lmosquitto -lSoapySDR -lliquid
 LDFLAGS  += -g -L/usr/local/lib
+
+ifeq ($(shell uname -s),Darwin)
+	CFLAGS+= -I/opt/homebrew/include -Wno-gnu-zero-variadic-macro-arguments
+	CXXFLAGS+= -I/opt/homebrew/include -Wno-gnu-zero-variadic-macro-arguments
+	LDFLAGS+= -L/opt/homebrew/lib
+endif
 
 CXXSRCS = $(wildcard *.cpp)
 CXXDEPS = $(CXXSRCS:.cpp=.d)
