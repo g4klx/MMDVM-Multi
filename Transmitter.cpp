@@ -22,10 +22,9 @@
 
 #include <cassert>
 
-Transmitter::Transmitter(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
-                         Channelizer* channelizer, DMRTiming* burst_timer,
-                         unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
-                         float dac_scaling, float symbol_deviation) : 
+Transmitter::Transmitter(Network* network, Device* device, DMRTiming* burst_timer, 
+                         unsigned int num_active_channels, unsigned int num_pfb_channels, float sampleRate,
+                         bool needs_timestamp, float symbol_deviation, float dac_scaling) : 
 m_running(true),
 m_stopped(false),
 m_timingInit(false),
@@ -38,14 +37,10 @@ m_pfbChannels(num_pfb_channels),
 m_timingCorrection(0LL),
 m_network(network),
 m_device(device),
-m_fmMod(fm_mod),
-m_resampler(resampler),
-m_rotator(rotator),
-m_channelizer(channelizer),
 m_burstTimer(burst_timer)
 {
     assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
-    assert(m_pfbChannels > 1U);
+    assert(m_pfbChannels > 3U);
     assert(m_pfbChannels <= MAX_PFB_CHANNELS);
 
     for (unsigned int i = 0U; i < m_activeChannels; i++)
@@ -54,10 +49,14 @@ m_burstTimer(burst_timer)
     unsigned int max_chan_real = m_pfbChannels / 2U - 1U;
     max_chan_real = std::min<unsigned int>(max_chan_real, 4U); // FIXME: flexible number of channels
     m_fillReal    = std::min<unsigned int>(max_chan_real, m_activeChannels);
+
+    // Transmitte channel IQ handler
+    m_txch = new CTransmitterChannel(m_activeChannels, m_pfbChannels, sampleRate, FSK4_DEVIATION);
 }
 
 Transmitter::~Transmitter()
 {
+    delete m_txch;
 }
 
 void Transmitter::stop()
@@ -217,6 +216,7 @@ void Transmitter::entry()
     }
 
     m_stopped = true;
+    LogMessage("Transmitter thread exit");
 }
 
 void Transmitter::processSamples(std::complex<float>* output_samples, bool* channel_idle)
@@ -228,7 +228,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
     for (unsigned int i = 0U; i < m_activeChannels; i++) {
         if (m_sampleBuf[i].size() >= SAMPLES_PER_SLOT) {
             std::complex<float> freq_modulated[SAMPLES_PER_SLOT] = {0.0F, 0.0F};
-            m_fmMod->modulate(i, m_sampleBuf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
+            m_txch->modulate(i, m_sampleBuf[i].data(), SAMPLES_PER_SLOT, freq_modulated);
 
             if (channel_idle[i]) {
                 for (unsigned int j = 0U; j < SAMPLES_PER_SLOT; j++)
@@ -236,7 +236,7 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
             }
 
             std::complex<float> resampled[TX_INTERP_OUT_SIZE] = {0.0F, 0.0F};
-            m_resampler->upsample(i, freq_modulated, SAMPLES_PER_SLOT, resampled);
+            m_txch->upsample(i, freq_modulated, SAMPLES_PER_SLOT, resampled);
 
             ::memcpy(&channelizer_samples[i][0], resampled, TX_INTERP_OUT_SIZE * sizeof(std::complex<float>));
             m_sampleBuf[i].erase(m_sampleBuf[i].begin(), m_sampleBuf[i].begin() + SAMPLES_PER_SLOT);
@@ -254,10 +254,10 @@ void Transmitter::processSamples(std::complex<float>* output_samples, bool* chan
         for (unsigned int m = m_pfbChannels - 1U, p = m_fillReal; p < m_activeChannels; m--, p++)
             channels[m] = channelizer_samples[p][i] * m_DACScaling / float(m_activeChannels);
 
-        m_channelizer->synthesize(channels, &channelized[i * m_pfbChannels]);
+        m_txch->synthesize(channels, &channelized[i * m_pfbChannels]);
     }
 
-    m_rotator->rotate(channelized, TX_INTERP_OUT_SIZE * m_pfbChannels, output_samples);
+    m_txch->rotateUp(channelized, TX_INTERP_OUT_SIZE * m_pfbChannels, output_samples);
 }
 
 void Transmitter::setTx(bool* channelIdle)

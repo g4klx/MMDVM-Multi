@@ -23,6 +23,7 @@
 #include "Network.h"
 #include "Device.h"
 #include "Constants.h"
+#include "TransmitterChannel.h"
 #include "DMRTiming.h"
 #include "FMMod.h"
 #include "Resampler.h"
@@ -39,10 +40,9 @@
 class Transmitter : public CThread
 {
 public:
-    Transmitter(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
-                Channelizer* channelizer, DMRTiming* burst_timer,
-                unsigned int num_active_channels, unsigned int num_pfb_channels, bool needs_timestamp,
-                float dac_scaling, float symbol_deviation);
+    Transmitter(Network* network, Device* device, DMRTiming* burst_timer,
+                unsigned int num_active_channels, unsigned int num_pfb_channels, float sampleRate,
+                bool needs_timestamp, float symbol_deviation, float dac_scaling);
     virtual ~Transmitter();
 
     virtual void entry();
@@ -72,10 +72,7 @@ private:
     int64_t      m_timingCorrection;
     Network*     m_network;
     Device*      m_device;
-    FMMod*       m_fmMod;
-    Resampler*   m_resampler;
-    Rotator*     m_rotator;
-    Channelizer* m_channelizer;
+    CTransmitterChannel* m_txch;
     DMRTiming*   m_burstTimer;
 
     std::vector<uint8_t> m_controlBuf[MAX_MMDVM_CHANNELS];

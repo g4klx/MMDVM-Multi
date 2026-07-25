@@ -22,18 +22,14 @@
 
 #include <cassert>
 
-Receiver::Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
-                   Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-                   unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp) : 
+Receiver::Receiver(Network* network, Device* device, DMRTiming* burst_timer,
+                   unsigned int num_active_channels, unsigned int num_pfb_channels, float sampleRate,
+                   bool needs_timestamp, float symbol_deviation, float power_calibration) : 
 m_running(true),
 m_stopped(false),
 m_timestamping(needs_timestamp),
 m_network(network),
 m_device(device),
-m_fmMod(fm_mod),
-m_resampler(resampler),
-m_rotator(rotator),
-m_channelizer(channelizer),
 m_burstTimer(burst_timer),
 m_activeChannels(num_active_channels),
 m_pfbChannels(num_pfb_channels),
@@ -42,7 +38,7 @@ m_symbolDeviation(symbol_deviation),
 m_readTime(0LL)
 {
     assert(m_activeChannels <= MAX_MMDVM_CHANNELS);
-    assert(m_pfbChannels > 1U);
+    assert(m_pfbChannels > 3U);
     assert(m_pfbChannels <= MAX_PFB_CHANNELS);
 
     for (unsigned int i = 0U;i < m_activeChannels;i++) {
@@ -54,10 +50,14 @@ m_readTime(0LL)
     unsigned int max_real_chan = m_pfbChannels / 2U - 1U;
     max_real_chan = std::min<unsigned int>(max_real_chan, 4U); // FIXME: flexible number of channels
     m_fillReal = std::min<unsigned int>(max_real_chan, m_activeChannels);
+
+    // Receive channel IQ handler
+    m_rxch = new CReceiverChannel(m_activeChannels, m_pfbChannels, sampleRate, FSK4_DEVIATION);
 }
 
 Receiver::~Receiver()
 {
+    delete m_rxch;
 }
 
 void Receiver::stop()
@@ -97,14 +97,14 @@ void Receiver::entry()
             timeNs = m_readTime;
 
         std::complex<float> rotated[RX_SAMP_IN_SIZE] = {0.0F, 0.0F};
-        m_rotator->derotate(read_buffer, RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
+        m_rxch->rotateDown(read_buffer, RX_INTERP_IN_SIZE * m_pfbChannels, rotated);
 
         std::complex<float> channelized1[RX_INTERP_IN_SIZE][MAX_PFB_CHANNELS] = {{0.0F, 0.0F}};
         std::complex<float> channelized2[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE] = {{0.0F, 0.0F}};
         std::complex<float> rearranged[MAX_PFB_CHANNELS][RX_INTERP_IN_SIZE]   = {{0.0F, 0.0F}};
 
         for (unsigned int i = 0U; i < RX_INTERP_IN_SIZE; i++)
-            m_channelizer->channelize(&rotated[i*m_pfbChannels], &channelized1[i][0]);
+            m_rxch->channelize(&rotated[i*m_pfbChannels], &channelized1[i][0]);
 
         for (unsigned int i = 0U; i < m_pfbChannels; i++) {
             for (unsigned int j = 0U; j < RX_INTERP_IN_SIZE; j++)
@@ -154,8 +154,8 @@ void Receiver::entry()
 
         // Simulate a timestamp
         if (!m_timestamping || ((flags & SOAPY_SDR_HAS_TIME) != SOAPY_SDR_HAS_TIME))
-            m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_resampler->getDecim() /
-                          (long long)m_resampler->getInterp() / (long long)m_pfbChannels;
+            m_readTime += (long long)ret * TIME_PER_SAMPLE * (long long)m_rxch->getDecim() /
+                          (long long)m_rxch->getInterp() / (long long)m_pfbChannels;
 
         for (unsigned int j = 0U; j < m_activeChannels; j++) {
             uint32_t num_items = SAMPLES_PER_SLOT;
@@ -180,6 +180,8 @@ void Receiver::entry()
     }
 
     m_stopped = true;
+
+    LogDebug("Receiver thread exit");
 }
 
 void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samples, float* output_samples)
@@ -189,7 +191,7 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
     assert(output_samples != nullptr);
 
     std::complex<float> resampled[RX_SAMP_OUT_SIZE] = {0.0F, 0.0F};
-    m_resampler->downsample(channel, in_samples, RX_INTERP_IN_SIZE, resampled);
+    m_rxch->downsample(channel, in_samples, RX_INTERP_IN_SIZE, resampled);
 
     float sum = 0.0F;
     for (unsigned int i = 0U; i < RX_SAMP_OUT_SIZE; i++)
@@ -203,5 +205,5 @@ void Receiver::processSamples(unsigned int channel, std::complex<float>* in_samp
     if (rssi < m_RSSI[channel]) // keep max dB value since the buffer may overlap two timeslots, one active one inactive
         m_RSSI[channel] = rssi;
 
-    m_fmMod->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
+    m_rxch->demodulate(channel, resampled, RX_SAMP_OUT_SIZE, output_samples);
 }

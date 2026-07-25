@@ -36,7 +36,13 @@ static const unsigned int MAX_PFB_CHANNELS = 40U;  // max sample rate 1M
 static const unsigned int MAX_SAMPLE_RATE = 1000000U;
 static const unsigned int PFB_FILTER_DELAY = 48U;  // must reduce on RPi platforms if bursts are consistently late due to CPU load
 static const unsigned int RESAMPLER_FILTER_DELAY = 24U; // ntaps = 2 * delay + 1
+static const unsigned int RESAMPLER_INTERPOLATION = 25U;
+static const unsigned int RESAMPLER_DECIMATION    = 24U;
+static const float        RESAMPLER_FRACTIONAL_BW = 0.4f;
 static const long long TOTAL_FILTER_DELAY = ((2LL * RESAMPLER_FILTER_DELAY) + (2LL * PFB_FILTER_DELAY)) * TIME_PER_SAMPLE;
+
+static const float        DEFAULT_BASEBAND_SHIFT  = 12500.0f;
+static const unsigned int DEFAULT_CHANNEL_SPACING = 25000U;
 
 static const float MAX_TX_DAC_SCALE = 0.98f;
 static const float FSK4_DEVIATION = 0.520833333333f; // for 24k, gives 1944 Hz for DMR symbol deviation

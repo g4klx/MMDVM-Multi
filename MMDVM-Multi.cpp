@@ -1,6 +1,7 @@
 /*
  *   Copyright (C) 2026 by Adrian Musceac YO8RZZ
  *   Copyright (C) 2015-2023,2025,2026 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2026 by Shawn Chain BG5HHP
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -26,9 +27,6 @@
 #include "Transmitter.h"
 #include "Thread.h"
 #include "FMMod.h"
-#include "Resampler.h"
-#include "Rotator.h"
-#include "Channelizer.h"
 #include "Version.h"
 #include "Conf.h"
 #include "Log.h"
@@ -160,37 +158,38 @@ int main(int argc, char** argv)
     }
 
     bool debug = conf.getModemTrace();
-    unsigned int active_channels = std::min<unsigned int>(conf.getNumChannels(), MAX_MMDVM_CHANNELS);
-    active_channels = std::max<unsigned int>(active_channels, 1U);
-    int sample_delay = conf.getSampleDelay(); // can be negative
-    unsigned int rf_delay = conf.getRFDelay();
-    unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
-    unsigned int digital_gain = std::max<unsigned int>(conf.getDigitalGain(), 1U);
-    float dac_scaling = std::min<float>(float(digital_gain) / 100.0f, MAX_TX_DAC_SCALE);
-    float symbol_deviation = float(std::max<unsigned int>(conf.getSymbolDeviation(), 1U));
-    unsigned int interpolation = 25U;
-    unsigned int decimation = 24U;
-    unsigned int channel_spacing = 25000U;
-    float baseband_shift = 12500.0f;
-    float fractional_bandwidth = 0.4f;
-    unsigned int power_calibration = conf.getRSSICalibration();
 
+    // Sample rate
+    unsigned int sample_rate = std::min<unsigned int>(conf.getSampleRate(), MAX_SAMPLE_RATE);
+
+    // pfb channels
+    unsigned int channel_spacing = DEFAULT_CHANNEL_SPACING; // 25000U;
     if ((sample_rate % channel_spacing) != 0U) {
         ::LogError("Sample Rate must be a multiple of channel space");
         return 1;
     }
-
     unsigned int num_pfb_channels = sample_rate / channel_spacing;
     if (num_pfb_channels > MAX_PFB_CHANNELS) {
         ::LogError("The sample rate %d is not supported", sample_rate);
         return 1;
     }
 
+    // Active channels
+    unsigned int active_channels = conf.getNumChannels();
+    if (active_channels == 0) {
+        LogMessage("At least 1 channel will be activated");
+        active_channels = 1;
+    }
+    if (active_channels > MAX_MMDVM_CHANNELS) {
+        LogMessage("Active Channels is limited to max %u", MAX_MMDVM_CHANNELS);
+        active_channels = MAX_MMDVM_CHANNELS;
+    }
     if (active_channels >= num_pfb_channels) {
         ::LogError("The number of channels must be lower than % d for this sample rate", num_pfb_channels);
         return 1;
     }
 
+    // Networking
     std::string modemAddress = conf.getNetworkModemAddress();
     unsigned short modemPort = conf.getNetworkModemPort();
     std::string localAddress = conf.getNetworkLocalAddress();
@@ -202,6 +201,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    // SDR Device
+    float baseband_shift = DEFAULT_BASEBAND_SHIFT; // 12500.0f;
     float rx_gain = float(conf.getRxGain());
     float tx_gain = float(conf.getTxGain());
     float rx_freq = float(conf.getRxFreq()) - baseband_shift;
@@ -223,17 +224,23 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    Rotator* rotator = new Rotator(baseband_shift, float(sample_rate));
-    Channelizer* channelizer = new Channelizer(num_pfb_channels);
-    Resampler* resampler = new Resampler(interpolation, decimation, fractional_bandwidth, active_channels);
-    FMMod* fm_mod = new FMMod(FSK4_DEVIATION, active_channels);
+    // Transmitter/Receiver
+    int sample_delay = conf.getSampleDelay(); // can be negative
+    unsigned int rf_delay = conf.getRFDelay();
+    unsigned int digital_gain = std::max<unsigned int>(conf.getDigitalGain(), 1U);
+    float dac_scaling = std::min<float>(float(digital_gain) / 100.0f, MAX_TX_DAC_SCALE);
+    float symbol_deviation = float(std::max<unsigned int>(conf.getSymbolDeviation(), 1U));
+    unsigned int power_calibration = conf.getRSSICalibration();
+
     DMRTiming* timing = new DMRTiming(rf_delay, sample_delay);
 
-    Receiver* rx = new Receiver(network, device, fm_mod, resampler, rotator, channelizer,
-                                timing, active_channels, num_pfb_channels, power_calibration, symbol_deviation, needs_timestamp);
+    Receiver*    rx = new Receiver(network, device, timing, 
+                                active_channels, num_pfb_channels, float(sample_rate), 
+                                needs_timestamp, symbol_deviation, power_calibration);
 
-    Transmitter* tx = new Transmitter(network, device, fm_mod, resampler, rotator, channelizer,
-                                      timing, active_channels, num_pfb_channels, needs_timestamp, dac_scaling, symbol_deviation);
+    Transmitter* tx = new Transmitter(network, device, timing, 
+                                      active_channels, num_pfb_channels, float(sample_rate),
+                                      needs_timestamp, symbol_deviation, dac_scaling);
 
     rx->run();
     tx->run();
@@ -263,10 +270,6 @@ int main(int argc, char** argv)
     delete tx;
     delete rx;
     delete timing;
-    delete fm_mod;
-    delete resampler;
-    delete channelizer;
-    delete rotator;
     delete device;
     delete network;
 

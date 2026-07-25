@@ -23,11 +23,8 @@
 #include "Network.h"
 #include "Device.h"
 #include "Constants.h"
+#include "ReceiverChannel.h"
 #include "DMRTiming.h"
-#include "FMMod.h"
-#include "Resampler.h"
-#include "Rotator.h"
-#include "Channelizer.h"
 #include "Thread.h"
 
 #include <cmath>
@@ -37,9 +34,9 @@
 class Receiver : public CThread
 {
 public:
-    Receiver(Network* network, Device* device, FMMod* fm_mod, Resampler* resampler, Rotator* rotator,
-             Channelizer* channelizer, DMRTiming* burst_timer, unsigned int num_active_channels,
-             unsigned int num_pfb_channels, float power_calibration, float symbol_deviation, bool needs_timestamp);
+    Receiver(Network* network, Device* device, DMRTiming* burst_timer, 
+             unsigned int num_active_channels, unsigned int num_pfb_channels, float sampleRate,
+             bool needs_timestamp, float symbol_deviation, float power_calibration);
     virtual ~Receiver();
 
     virtual void entry();
@@ -53,10 +50,7 @@ private:
     bool m_timestamping;
     Network* m_network;
     Device* m_device;
-    FMMod* m_fmMod;
-    Resampler* m_resampler;
-    Rotator* m_rotator;
-    Channelizer* m_channelizer;
+    CReceiverChannel* m_rxch;
     DMRTiming* m_burstTimer;
     unsigned int m_activeChannels;
     unsigned int m_pfbChannels;
