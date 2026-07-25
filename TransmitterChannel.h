@@ -1,6 +1,6 @@
 /*
  *   Copyright (C) 2023-2026 by Adrian Musceac YO8RZZ
- *   Copyright (C) 2023-2026 by Shawn Chain BG5HHP
+ *   Copyright (C) 2026 by Shawn Chain BG5HHP
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef TRANSMITTER_CHANNEL_HELPER_H
-#define TRANSMITTER_CHANNEL_HELPER_H
+#ifndef TRANSMITTER_CHANNEL_H
+#define TRANSMITTER_CHANNEL_H
 
 #include <complex>
 #include <cmath>
@@ -72,4 +72,4 @@ private:
     freqmod         m_FMmod[MAX_MMDVM_CHANNELS];
 };
 
-#endif // TRANSMITTER_CHANNEL_HELPER_H
+#endif // TRANSMITTER_CHANNEL_H
