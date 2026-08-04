@@ -182,12 +182,12 @@ int main(int argc, char** argv)
 
     unsigned int num_pfb_channels = sample_rate / channel_spacing;
     if (num_pfb_channels > MAX_PFB_CHANNELS) {
-        ::LogError("The sample rate %d is not supported", sample_rate);
+        ::LogError("The sample rate %u is not supported", sample_rate);
         return 1;
     }
 
     if (active_channels >= num_pfb_channels) {
-        ::LogError("The number of channels must be lower than % d for this sample rate", num_pfb_channels);
+        ::LogError("The number of channels must be lower than %u for this sample rate", num_pfb_channels);
         return 1;
     }
 
