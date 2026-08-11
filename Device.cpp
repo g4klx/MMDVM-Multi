@@ -76,6 +76,15 @@ m_soapyInit(false)
         txArgs["latency"] = "0";
         ::LogInfo("Using Lime SDR driver uri %s", uri);
         m_type = SOAPY_TYPE::LimeSDR;
+    } else if (m_soapyDeviceType.compare("limepsb") == 0) {
+        const char* uri = m_soapyDeviceURI.empty() ? LIME_DEFAULT_URI : m_soapyDeviceURI.c_str();
+        devArgs["driver"] = "limesuiteng";
+        rxArgs["uri"]     = uri;
+        txArgs["uri"]     = uri;
+        rxArgs["latency"] = "0";
+        txArgs["latency"] = "0";
+        ::LogInfo("Using LimeSuiteNG driver uri %s", uri);
+        m_type = SOAPY_TYPE::LimeSDR;
     } else if (m_soapyDeviceType.compare("usrp") == 0) {
         const char* uri = m_soapyDeviceURI.c_str();
         devArgs["driver"] = "uhd";
