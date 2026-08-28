@@ -59,12 +59,12 @@ bool CMQTTConnection::open()
 {
 	char name[50U];
 #if defined(_WIN32) || defined(_WIN64)
-	::sprintf(name, "MMDVMHost.%u", (unsigned)::_getpid());
+	::sprintf(name, "MMDVM-Multi.%u", (unsigned)::_getpid());
 #else
-	::sprintf(name, "MMDVMHost.%u", (unsigned)::getpid());
+	::sprintf(name, "MMDVM-Multi.%u", (unsigned)::getpid());
 #endif
 
-	::fprintf(stdout, "MMDVMHost (%s) connecting to MQTT as %s\n", m_name.c_str(), name);
+	::fprintf(stdout, "MMDVM-Multi (%s) connecting to MQTT as %s\n", m_name.c_str(), name);
 
 	m_mosq = ::mosquitto_new(name, true, this);
 	if (m_mosq == nullptr) {
