@@ -33,12 +33,22 @@ enum class SOAPY_TYPE {
     USRP
 };
 
+struct SX1255StageGains {
+    bool  useRX;
+    bool  useTX;
+    float rxLNA;
+    float rxPGA;
+    float txDAC;
+    float txMixer;
+};
+
 class Device
 {
 public:
 
     Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
-           float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
+           float rxGain, float txGain, const SX1255StageGains& sx1255StageGains,
+           std::string rxAntenna, std::string txAntenna,
            unsigned int num_pfb_channels, bool debug);
     ~Device();
 
@@ -67,6 +77,7 @@ private:
     float                m_soapyRXFreq;
     float                m_soapyTXGain;
     float                m_soapyRXGain;
+    SX1255StageGains     m_sx1255StageGains;
     std::string          m_rxAntenna;
     std::string          m_txAntenna;
 
