@@ -52,6 +52,38 @@ For the PlutoSDR: https://github.com/pothosware/SoapyPlutoSDR
 
 The master branch must be cloned and built for the repo as the current packaged versions are not compatible with MMDVM-Multi.
 
+SX1255 gain stages
+----
+
+When `Type=sx`, the SX1255 analog gain stages can be configured explicitly:
+
+```
+RxLNAGain=36
+RxPGAGain=14
+TxDACGain=3
+TxMixerGain=28
+```
+
+The RX pair and TX pair are independently optional, but both values in a pair
+must be specified together. An omitted pair continues to use the aggregate
+`RxGain` or `TxGain` setting, preserving compatibility with existing
+configurations. Named settings are ignored for other SDR types, which continue
+to use aggregate gains.
+
+SoapySX reports the following stage ranges. Requested values are quantized by
+the driver to settings supported by the SX1255, and MMDVM-Multi logs the values
+actually applied:
+
+| Stage | Range | Nominal step |
+|---|---:|---:|
+| RX LNA | 0–48 dB | 6 dB |
+| RX PGA | 0–30 dB | 2 dB |
+| TX DAC | 0–9 dB | 3 dB |
+| TX mixer | 0–30 dB | 2 dB |
+
+`DigitalGain` remains separate and controls digital baseband amplitude rather
+than an SX1255 analog gain stage.
+
 
 Running
 ====

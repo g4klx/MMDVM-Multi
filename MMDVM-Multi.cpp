@@ -191,6 +191,59 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    float rx_gain = float(conf.getRxGain());
+    float tx_gain = float(conf.getTxGain());
+    SX1255StageGains sx1255_stage_gains = {false, false, 0.0F, 0.0F, 0.0F, 0.0F};
+    float rx_freq = float(conf.getRxFreq()) - baseband_shift;
+    float tx_freq = float(conf.getTxFreq()) - baseband_shift;
+
+    std::string rx_antenna = conf.getRxAntenna();
+    std::string tx_antenna = conf.getTxAntenna();
+    std::string deviceType = conf.getModemType();
+    std::string modemURI   = conf.getModemURI();
+
+    const bool any_rx_stage = conf.hasRxLNAGain() || conf.hasRxPGAGain();
+    const bool all_rx_stages = conf.hasRxLNAGain() && conf.hasRxPGAGain();
+    const bool any_tx_stage = conf.hasTxDACGain() || conf.hasTxMixerGain();
+    const bool all_tx_stages = conf.hasTxDACGain() && conf.hasTxMixerGain();
+
+    if (deviceType.compare("sx") == 0) {
+        if (any_rx_stage && !all_rx_stages) {
+            ::LogError("RxLNAGain and RxPGAGain must be specified together for Type=sx");
+            return 1;
+        }
+        if (any_tx_stage && !all_tx_stages) {
+            ::LogError("TxDACGain and TxMixerGain must be specified together for Type=sx");
+            return 1;
+        }
+
+        if (all_rx_stages) {
+            const int lna = conf.getRxLNAGain();
+            const int pga = conf.getRxPGAGain();
+            if (lna < 0 || lna > 48 || pga < 0 || pga > 30) {
+                ::LogError("SX1255 RX gain range is LNA 0..48 dB and PGA 0..30 dB");
+                return 1;
+            }
+            sx1255_stage_gains.useRX = true;
+            sx1255_stage_gains.rxLNA = float(lna);
+            sx1255_stage_gains.rxPGA = float(pga);
+        }
+
+        if (all_tx_stages) {
+            const int dac = conf.getTxDACGain();
+            const int mixer = conf.getTxMixerGain();
+            if (dac < 0 || dac > 9 || mixer < 0 || mixer > 30) {
+                ::LogError("SX1255 TX gain range is DAC 0..9 dB and MIXER 0..30 dB");
+                return 1;
+            }
+            sx1255_stage_gains.useTX = true;
+            sx1255_stage_gains.txDAC = float(dac);
+            sx1255_stage_gains.txMixer = float(mixer);
+        }
+    } else if (any_rx_stage || any_tx_stage) {
+        ::LogWarning("SX1255 named gain settings are ignored unless Type=sx");
+    }
+
     std::string modemAddress = conf.getNetworkModemAddress();
     unsigned short modemPort = conf.getNetworkModemPort();
     std::string localAddress = conf.getNetworkLocalAddress();
@@ -202,22 +255,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    float rx_gain = float(conf.getRxGain());
-    float tx_gain = float(conf.getTxGain());
-    float rx_freq = float(conf.getRxFreq()) - baseband_shift;
-    float tx_freq = float(conf.getTxFreq()) - baseband_shift;
-
-    std::string rx_antenna = conf.getRxAntenna();
-    std::string tx_antenna = conf.getTxAntenna();
-    std::string deviceType = conf.getModemType();
-    std::string modemURI   = conf.getModemURI();
-
     bool needs_timestamp = true;
     if (deviceType.compare("plutosdr") == 0 || deviceType.compare("pluto") == 0)
         needs_timestamp = false;
 
     Device* device = new Device(deviceType, modemURI, double(sample_rate), rx_freq, tx_freq,
-                                rx_gain, tx_gain, rx_antenna, tx_antenna, num_pfb_channels, debug);
+                                rx_gain, tx_gain, sx1255_stage_gains,
+                                rx_antenna, tx_antenna, num_pfb_channels, debug);
     if (!device->getSoapyInit() || (device->getRxStream() == nullptr) || (device->getTxStream() == nullptr)) {
         network->close();
         return 1;

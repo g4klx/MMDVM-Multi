@@ -26,7 +26,8 @@ const size_t RX_CHANNEL = 0;
 const size_t TX_CHANNEL = 0;
 
 Device::Device(std::string deviceType, std::string modemURI, double sampleRate, float rxFreq, float txFreq,
-               float rxGain, float txGain, std::string rxAntenna, std::string txAntenna,
+               float rxGain, float txGain, const SX1255StageGains& sx1255StageGains,
+               std::string rxAntenna, std::string txAntenna,
                unsigned int num_pfb_channels, bool debug) :
 m_soapyDeviceType(deviceType),
 m_soapyDeviceURI(modemURI),
@@ -39,6 +40,7 @@ m_soapyTXFreq(txFreq),
 m_soapyRXFreq(rxFreq),
 m_soapyTXGain(txGain),
 m_soapyRXGain(rxGain),
+m_sx1255StageGains(sx1255StageGains),
 m_rxAntenna(rxAntenna),
 m_txAntenna(txAntenna),
 m_soapyInit(false)
@@ -116,9 +118,29 @@ m_soapyInit(false)
         m_device->setAntenna(SOAPY_SDR_RX, RX_CHANNEL, m_rxAntenna);
         m_device->setAntenna(SOAPY_SDR_TX, TX_CHANNEL, m_txAntenna);
 
-        // Device TX calibration routine requires normal gains for RF loopback
-        m_device->setGain(SOAPY_SDR_RX, RX_CHANNEL, m_soapyRXGain);
-        m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, m_soapyTXGain);
+        // Device TX calibration routine requires normal gains for RF loopback.
+        // Named gains avoid SoapySX's provisional aggregate distribution.
+        if (m_type == SOAPY_TYPE::SXceiver && m_sx1255StageGains.useRX) {
+            m_device->setGain(SOAPY_SDR_RX, RX_CHANNEL, "LNA", m_sx1255StageGains.rxLNA);
+            m_device->setGain(SOAPY_SDR_RX, RX_CHANNEL, "PGA", m_sx1255StageGains.rxPGA);
+            ::LogMessage("SX1255 RX gains requested LNA %.1f dB, PGA %.1f dB; applied LNA %.1f dB, PGA %.1f dB",
+                         m_sx1255StageGains.rxLNA, m_sx1255StageGains.rxPGA,
+                         m_device->getGain(SOAPY_SDR_RX, RX_CHANNEL, "LNA"),
+                         m_device->getGain(SOAPY_SDR_RX, RX_CHANNEL, "PGA"));
+        } else {
+            m_device->setGain(SOAPY_SDR_RX, RX_CHANNEL, m_soapyRXGain);
+        }
+
+        if (m_type == SOAPY_TYPE::SXceiver && m_sx1255StageGains.useTX) {
+            m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, "DAC", m_sx1255StageGains.txDAC);
+            m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, "MIXER", m_sx1255StageGains.txMixer);
+            ::LogMessage("SX1255 TX gains requested DAC %.1f dB, MIXER %.1f dB; applied DAC %.1f dB, MIXER %.1f dB",
+                         m_sx1255StageGains.txDAC, m_sx1255StageGains.txMixer,
+                         m_device->getGain(SOAPY_SDR_TX, TX_CHANNEL, "DAC"),
+                         m_device->getGain(SOAPY_SDR_TX, TX_CHANNEL, "MIXER"));
+        } else {
+            m_device->setGain(SOAPY_SDR_TX, TX_CHANNEL, m_soapyTXGain);
+        }
 
         m_device->setBandwidth(SOAPY_SDR_RX, RX_CHANNEL, m_sampleRate);
         m_device->setBandwidth(SOAPY_SDR_TX, TX_CHANNEL, m_sampleRate);

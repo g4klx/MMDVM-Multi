@@ -58,6 +58,14 @@ m_rxFreq(431800000U),
 m_txFreq(433800000U),
 m_rxGain(30U),
 m_txGain(60U),
+m_rxLNAGainSet(false),
+m_rxPGAGainSet(false),
+m_txDACGainSet(false),
+m_txMixerGainSet(false),
+m_rxLNAGain(0),
+m_rxPGAGain(0),
+m_txDACGain(0),
+m_txMixerGain(0),
 m_rxAntenna("Auto"),
 m_txAntenna("Auto"),
 m_modemTrace(false),
@@ -178,7 +186,19 @@ bool CConf::read()
 				m_rxGain = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "TxGain") == 0)
 				m_txGain = (unsigned int)::atoi(value);
-			else if (::strcmp(key, "RxFrequency") == 0)
+			else if (::strcmp(key, "RxLNAGain") == 0) {
+				m_rxLNAGain = ::atoi(value);
+				m_rxLNAGainSet = true;
+			} else if (::strcmp(key, "RxPGAGain") == 0) {
+				m_rxPGAGain = ::atoi(value);
+				m_rxPGAGainSet = true;
+			} else if (::strcmp(key, "TxDACGain") == 0) {
+				m_txDACGain = ::atoi(value);
+				m_txDACGainSet = true;
+			} else if (::strcmp(key, "TxMixerGain") == 0) {
+				m_txMixerGain = ::atoi(value);
+				m_txMixerGainSet = true;
+			} else if (::strcmp(key, "RxFrequency") == 0)
 				m_rxFreq = (unsigned int)::atoi(value);
 			else if (::strcmp(key, "TxFrequency") == 0)
 				m_txFreq = (unsigned int)::atoi(value);
@@ -309,6 +329,46 @@ unsigned int CConf::getRxGain() const
 unsigned int CConf::getTxGain() const
 {
 	return m_txGain;
+}
+
+bool CConf::hasRxLNAGain() const
+{
+	return m_rxLNAGainSet;
+}
+
+bool CConf::hasRxPGAGain() const
+{
+	return m_rxPGAGainSet;
+}
+
+bool CConf::hasTxDACGain() const
+{
+	return m_txDACGainSet;
+}
+
+bool CConf::hasTxMixerGain() const
+{
+	return m_txMixerGainSet;
+}
+
+int CConf::getRxLNAGain() const
+{
+	return m_rxLNAGain;
+}
+
+int CConf::getRxPGAGain() const
+{
+	return m_rxPGAGain;
+}
+
+int CConf::getTxDACGain() const
+{
+	return m_txDACGain;
+}
+
+int CConf::getTxMixerGain() const
+{
+	return m_txMixerGain;
 }
 
 unsigned int CConf::getRxFreq() const
